@@ -57,7 +57,7 @@ export interface ProxyNode {
     [key: string]: unknown;
 }
 
-export type ProxyGroupType = "select" | "url-test" | "load-balance" | "fallback";
+export type ProxyGroupType = "select" | "url-test" | "load-balance";
 
 export type LoadBalanceStrategy = "sticky-sessions" | "consistent-hashing" | "round-robin";
 
@@ -89,15 +89,7 @@ export interface LoadBalanceProxyGroup extends BaseProxyGroup {
     strategy: LoadBalanceStrategy;
 }
 
-export interface FallbackProxyGroup extends BaseProxyGroup {
-    type: "fallback";
-    url: string;
-    interval: number;
-    tolerance: number;
-}
-
-export type ProxyGroup =
-    SelectProxyGroup | UrlTestProxyGroup | LoadBalanceProxyGroup | FallbackProxyGroup;
+export type ProxyGroup = SelectProxyGroup | UrlTestProxyGroup | LoadBalanceProxyGroup;
 
 export interface SnifferProtocolConfig {
     ports: number[];
@@ -219,13 +211,11 @@ export interface BaseLists {
     defaultProxies: string[];
     defaultProxiesDirect: string[];
     defaultSelector: string[];
-    defaultFallback: string[];
     frontProxySelector: string[];
 }
 
 export interface BuildBaseListsInput {
     landing: boolean;
-    countryNames: string[];
     countryGroups: ProxyGroup[];
     nonLandingNodes: ProxyNode[];
     regexFilter: boolean;
@@ -249,6 +239,5 @@ export interface BuildProxyGroupsInput {
     defaultProxies: string[];
     defaultProxiesDirect: string[];
     defaultSelector: string[];
-    defaultFallback: string[];
     frontProxySelector: string[];
 }

@@ -84,19 +84,13 @@ function main(config: ClashConfig): ClashConfig {
     const tailscaleNodes = parseTailscale(config.proxies);
     const hasTailscale = tailscaleNodes.length > 0;
 
-    const {
-        defaultProxies,
-        defaultProxiesDirect,
-        defaultSelector,
-        defaultFallback,
-        frontProxySelector,
-    } = buildBaseLists({
-        landing,
-        countryNames,
-        countryGroups,
-        nonLandingNodes,
-        regexFilter,
-    });
+    const { defaultProxies, defaultProxiesDirect, defaultSelector, frontProxySelector } =
+        buildBaseLists({
+            landing,
+            countryGroups,
+            nonLandingNodes,
+            regexFilter,
+        });
 
     const proxyGroups = buildProxyGroups({
         allNodes,
@@ -108,7 +102,6 @@ function main(config: ClashConfig): ClashConfig {
         defaultProxies,
         defaultProxiesDirect,
         defaultSelector,
-        defaultFallback,
         frontProxySelector,
     });
 

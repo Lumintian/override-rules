@@ -112,7 +112,6 @@ export function buildProxyGroups({
     defaultProxies,
     defaultProxiesDirect,
     defaultSelector,
-    defaultFallback,
     frontProxySelector,
 }: BuildProxyGroupsInput): ProxyGroup[] {
     const hasTW = countryNames.includes("台湾");
@@ -286,24 +285,6 @@ export function buildProxyGroups({
             icon: `${CDN_URL}/gh/Koolson/Qure@master/IconSet/Color/Final.png`,
             type: "select",
             proxies: [PROXY_GROUPS.SELECT, "DIRECT"],
-        },
-        {
-            name: PROXY_GROUPS.AUTO,
-            icon: `${CDN_URL}/gh/Koolson/Qure@master/IconSet/Color/Auto.png`,
-            type: "url-test",
-            url: SPEEDTEST_URL,
-            proxies: defaultFallback,
-            interval: 60,
-            tolerance: 20,
-        },
-        {
-            name: PROXY_GROUPS.FALLBACK,
-            icon: `${CDN_URL}/gh/Koolson/Qure@master/IconSet/Color/Available_1.png`,
-            type: "fallback",
-            url: SPEEDTEST_URL,
-            proxies: defaultFallback,
-            interval: 60,
-            tolerance: 20,
         },
         ...countryGroups,
     ];

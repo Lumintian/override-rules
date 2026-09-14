@@ -104,9 +104,6 @@ for (const regex of [false, true]) {
                     );
                 }
             }
-            for (const name of ["自动选择", "故障转移"]) {
-                assert.deepEqual(getGroup(result, name), getGroup(baseline, name));
-            }
             assertValidReferences(result);
         });
     }

@@ -40,7 +40,6 @@ flowchart TD
         FF --> BCG
         BCG --> CG["countryGroups (基础组 + 额外 select 组)"]
         CG --> BBL["buildBaseLists()"]
-        ACN --> BBL
         LAND --> BBL
         NLN --> BBL
         BBL --> BL["BaseLists"]
@@ -133,7 +132,7 @@ flowchart TD
 
 `buildCountryGroups()` 按地区权重遍历至少有一个候选节点的地区：基础组遵循 `countryThreshold` 和 `groupType`，额外组按显式数量生成，固定为 `select`，名称为「地区额外1」「地区额外2」等。无该地区节点时不生成空组。两类组均遵循 `regexFilter`，所以正则模式也保留运行时独立匹配及不按 `dialer-proxy` 排除成员的现有行为。
 
-额外组加入手动选择用途的服务列表和前置代理列表，不进入 `defaultFallback`，以保持原有自动选择 / 故障转移的候选范围。
+基础地区组和额外组直接加入 `选择代理`、服务列表和前置代理列表。不再生成跨地区的 `自动选择` / `故障转移` 组，也不再构建它们的候选列表；基础地区组自身的测速和负载均衡仍遵循 `groupType`。
 
 ### YAML Generator 的参数
 
