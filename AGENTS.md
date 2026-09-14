@@ -6,17 +6,18 @@
 
 ## 🎯 核心架构与原则
 
-- **源文件驱动**：所有核心逻辑均采用 TypeScript 编写，存放在 `src/` 与 `scripts/yaml_generator/` 目录中。
-  - `src/main.ts`：JS 动态覆写脚本的核心入口。
+- **源文件驱动**：所有核心逻辑均采用 TypeScript 编写，存放在 `src/`、`scripts/substore/` 与 `scripts/yaml_generator/` 目录中。
+  - `src/main.ts`：Mihomo JS 动态覆写脚本的核心入口。
+  - `scripts/substore/rename.ts`：Sub-Store 节点重命名脚本的核心入口。
   - `scripts/yaml_generator/generator.ts`：YAML 静态覆写文件的生成逻辑。
-- **禁止直接修改产物**：根目录下的 `convert.js`、`convert.min.js` 以及 `yamls/` 目录的内容属于自动生成的构建产物（注意：它们已被 `main` 分支取消 Git 跟踪）。**永远不要直接编辑这些产物文件**。一切修改必须在 `.ts` 源码中进行。
+- **禁止直接修改产物**：根目录下的 `convert.js`、`convert.min.js`、`rename.js`、`rename.min.js` 以及 `yamls/` 目录的内容属于自动生成的构建产物（注意：它们已被 `main` 分支取消 Git 跟踪）。**永远不要直接编辑这些产物文件**。一切修改必须在 `.ts` 源码中进行。
 - **构建工具链**：我们使用 `esbuild` 作为打包和压缩工具，可以通过编写的 `scripts/build.mjs` 脚本一次性地编译出包含了完整注释的产物文件。
 
 ## 🛠️ 开发与构建工作流
 
 在修改源代码后，执行以下命令以验证更改并生成本地对应的产物文件：
 
-- `npm run build`: 运行 `scripts/build.mjs` 脚本，同时编译生成未压缩的 `convert.js` 与经过强力压缩的 `convert.min.js`，并在顶部注入开源版权声明。
+- `npm run build`: 运行 `scripts/build.mjs`，编译生成 `convert.js`、`convert.min.js`、`rename.js` 与 `rename.min.js`，并在各产物顶部注入对应的开源版权声明。
 - `npm run generate`: 运行 YAML 覆写配置生成器，更新 `yamls/` 目录内的排列组合文件。
 - `npm run artifacts`: 一键依次执行上述所有构建与生成阶段。
 
@@ -25,7 +26,7 @@
 ## 🧹 代码规范
 
 1. **统一格式化**：本项目使用 ESLint 和 Prettier。修改完代码后，可以通过 `npm run format` 及 `npm run lint:fix` 整理代码，遵循既有代码风格。
-2. **保持纯粹**：对于 `convert.min.js` 中的构建结果，项目脚本配置了 `--legal-comments=none` 去除多余注释，并自动添加统一的文件 Header Banner。
+2. **保持纯粹**：对于压缩构建结果，项目脚本会去除多余注释，并从对应 TypeScript 入口自动添加文件 Header Banner。
 
 ## 📦 提交与 PR 规范
 

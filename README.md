@@ -53,102 +53,52 @@ https://cdn.jsdelivr.net/gh/Lumintian/override-rules/convert.min.js#grouptype=1&
 
 布尔参数支持 `true / false` 或 `1 / 0`。
 
-### 示例
+## 补充说明
 
-自动选择地区内延迟最低的节点：
+### Sub-Store 节点名称预处理
 
-```text
-https://cdn.jsdelivr.net/gh/Lumintian/override-rules/convert.min.js#grouptype=1
-```
-
-使用手动地区组：
+本项目维护一套与 Mihomo 覆写配套的 [Sub-Store 节点重命名脚本](scripts/substore/README.md)，用于预先统一节点的地区名称、国旗、序号、倍率及线路标签。稳定的命名约定能提高地区识别准确度，并为后续联动家宽、自建和落地策略组提供基础。
 
 ```text
-https://cdn.jsdelivr.net/gh/Lumintian/override-rules/convert.min.js#grouptype=0
+原始订阅 → rename.min.js → 规范化节点名称 → convert.min.js → Mihomo 配置
 ```
-
-使用负载均衡地区组：
-
-```text
-https://cdn.jsdelivr.net/gh/Lumintian/override-rules/convert.min.js#grouptype=2
-```
-
-开启 TUN 与 IPv6：
-
-```text
-https://cdn.jsdelivr.net/gh/Lumintian/override-rules/convert.min.js#tun=true&ipv6=true
-```
-
-## 节点命名建议
-
-本仓库会根据节点名称识别地区以及部分节点属性。使用 Sub-Store 时，建议尽量统一节点名称。
-
-当前推荐格式：
-
-```text
-节点提供商 | 中文地区 其他信息
-```
-
-例如：
-
-```text
-Provider A | 香港 01
-Provider A | 日本 02 0.5倍率
-Provider B | 美国 01 家宽
-SelfHost | 美国 01 落地 家宽
-```
-
-推荐至少保持以下两部分稳定：
-
-1. 节点提供商前缀。
-2. 中文地区名称。
-
-后续可以继续附加倍率、家宽、落地等属性。
 
 > [!IMPORTANT]
-> 节点名称最好保持稳定。不要长期把剩余流量、到期时间、实时延迟等频繁变化的信息加入节点名称，否则可能影响 Mihomo 对已选择节点的记忆。
+> 重命名脚本是 Sub-Store 节点预处理组件，不是 Mihomo 覆写脚本。请依次执行节点重命名与配置覆写。
 
-## 地区策略组
+发布版本：
 
-脚本会识别订阅中的国家 / 地区，并按照 `threshold` 过滤节点数量过少的地区。
-
-当前所有地区组统一使用 `grouptype` 指定的类型：
-
-- `0`：`select`，手动选择节点。
-- `1`：`url-test`，自动选择延迟较低的节点。
-- `2`：`load-balance`，使用 `sticky-sessions` 负载均衡。
-
-默认使用 `url-test`。
-
-> [!NOTE]
-> 当前版本还没有同时生成“地区自动组 + 地区固定出口组”。如果需要长期保持某项业务的出口 IP 稳定，可以暂时使用 `grouptype=0`，或者直接在业务策略组中手动选择具体节点。后续会进一步优化地区自动选择与固定出口共存时的策略组布局。
-
-## 链式代理 / 落地节点
-
-Mihomo 可以通过 `dialer-proxy` 为某个节点指定前置代理。
-
-当前脚本约定：带有下面字段的节点会被识别为落地节点：
-
-```yaml
-dialer-proxy: "前置代理"
+```text
+https://cdn.jsdelivr.net/gh/Lumintian/override-rules@dist/rename.min.js
 ```
 
-检测到落地节点后，会新增：
+推荐参数组合：
 
-- `前置代理`
-- `落地节点`
-
-两个策略组。
-
-例如可以在 Sub-Store 中为自建落地节点补充：
-
-```yaml
-dialer-proxy: "前置代理"
+```text
+https://cdn.jsdelivr.net/gh/Lumintian/override-rules@dist/rename.min.js#flag&blgd&bl&blkey=自建+落地&nm
 ```
 
-![落地节点策略组](img/dialer-group.png)
+该脚本以 [FengNinger/substore_rename_rule](https://github.com/FengNinger/substore_rename_rule) 为初始基础，现由本项目独立维护，后续实现可能随覆写规则演进而与上游不同。源码、基线版本及许可证信息见 [`scripts/substore/`](scripts/substore/README.md)。
 
-![落地节点配置示例](img/dialer-example.png)
+### 关于 DNS 泄露的说明
+
+很多人问用了这覆写规则跑 DNS 泄露测试说会泄露，为此我写了一篇文章澄清一些误解，具体请看[「关于 DNS 泄露及其相关误解的说明」](https://blog.l3zc.com/2026/05/dns-leak-misunderstanding/)。
+
+### 关于部分特殊代理组的说明
+
+**静态资源**：包含所有常见静态资源 CDN 域名、对象存储域名。大部分网站的静态资源（如图片、视频、音频、字体、JS、CSS）都有独立域名、不设置风控措施、不设置鉴权，这些静态资源可以使用 IP 不一定干净（例如 IDC 类 IP）、但是带宽更大、延时更低、而且有和大部分主流 CDN（如 Cloudflare、Akamai、Fastly、EdgeCast）在 IXP 有互联的网络出口。一般就实践经验来看，在正常上网中这部分域名产生的流量占据约 70% 左右。如果你在使用商业性质的远端策略服务提供商、且该服务上提供了低倍率节点，你可以将这部分域名分流至低倍率节点以节省流量。[^fn1]
+
+[^fn1]: 来源：[我有特别的 Surge 配置和使用技巧](https://blog.skk.moe/post/i-have-my-unique-surge-setup/)
+
+~~**Play 商店修复**：~~ 修复国行设备因使用`services.googleapis.cn`域名导致的 Google Play 下载应用时的「等待中…」问题。详见：[「Google Play 商店的国内 CDN：从密码学入门到分流策略优化」](https://blog.l3zc.com/2025/03/chinese-cdn-used-by-playstore/)，已经是默认行为。
+
+~~**Steam 修复**：~~ 用于让 Steam 客户端调用国内 CDN 及 P2P 网络下载，节省大量流量，已经是默认行为。
+
+### 关于链式代理的说明
+
+对于使用机场线路配合自行购买的落地机进行链式代理的情况，在 Substore 添加自建节点时，加入`dialer-proxy: "前置代理"`脚本即可自动识别，并新增「前置代理」和「落地节点」两个代理组。
+
+![新增的代理组](img/dialer-group.png) ![如何配置自建节点](img/dialer-example.png)
 
 > [!WARNING]
 > 当前所有落地节点共用同一个 `前置代理` 策略组，因此修改前置节点会同时影响所有落地节点。这是目前链式代理实现中准备继续优化的一部分。
