@@ -2,6 +2,8 @@
 yamls/
 convert.js
 convert.min.js
+rename.js
+rename.min.js
 
 # 依赖
 node_modules/
