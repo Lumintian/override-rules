@@ -1,6 +1,6 @@
 /*!
-powerfullz 的 Substore 订阅转换脚本
-https://github.com/powerfullz/override-rules
+Lumintian/override-rules 的 Sub-Store 订阅转换脚本
+https://github.com/Lumintian/override-rules
 
 支持的传入参数：
 - grouptype: 地区代理组类型（0=select 手动选择, 1=url-test 自动测速, 2=load-balance 负载均衡，默认 1）
@@ -14,7 +14,7 @@ https://github.com/powerfullz/override-rules
 - threshold: 地区节点数量小于该值时不显示分组 (默认 2)
 - regex: 使用正则过滤模式（include-all + filter）写入各地区代理组，而非直接枚举节点名称（默认 false）
 
-源码已迁移至 `src/*.ts`。
+源码位于 `src/*.ts`。
 */
 
 import { CDN_URL, PROXY_GROUPS } from "./constants";
@@ -47,7 +47,6 @@ function getRawArgs(): ScriptArgs {
     try {
         return $arguments;
     } catch {
-        // console.log("[powerfullz 的覆写脚本] 未检测到传入参数，使用默认参数。");
         return {};
     }
 }
@@ -67,7 +66,7 @@ const {
 
 function main(config: ClashConfig): ClashConfig {
     if (!config.proxies || !Array.isArray(config.proxies)) {
-        throw new Error("[powerfullz 的覆写脚本] 错误：Clash 配置中缺少有效的 proxies 字段");
+        throw new Error("[override-rules] 错误：Clash 配置中缺少有效的 proxies 字段");
     }
     const { landingNodes, nonLandingNodes } = parseNodesByLanding(config.proxies);
     const landing = landingNodes.length > 0 && nonLandingNodes.length > 0;
