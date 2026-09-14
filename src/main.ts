@@ -23,7 +23,6 @@ import { buildProxyGroups } from "./proxy_groups";
 import {
     getActiveCountryNames,
     parseCountries,
-    parseLowCost,
     parseNodesByLanding,
     parseTailscale,
 } from "./node_parser";
@@ -71,7 +70,6 @@ function main(config: ClashConfig): ClashConfig {
     const { landingNodes, nonLandingNodes } = parseNodesByLanding(config.proxies);
     const landing = landingNodes.length > 0 && nonLandingNodes.length > 0;
     const countryNodes = parseCountries(landing ? nonLandingNodes : config.proxies);
-    const lowCostNodes = parseLowCost(landing ? nonLandingNodes : config.proxies);
     const countryNames = getActiveCountryNames(countryNodes, countryThreshold);
     const allNodes = config.proxies.map((node) => node.name);
     const tailscaleNodes = parseTailscale(config.proxies);
@@ -85,7 +83,6 @@ function main(config: ClashConfig): ClashConfig {
         frontProxySelector,
     } = buildBaseLists({
         landing,
-        lowCostNodes,
         countryNames,
         nonLandingNodes,
         regexFilter,
@@ -97,7 +94,6 @@ function main(config: ClashConfig): ClashConfig {
         groupType,
         countryNames,
         countryNodes,
-        lowCostNodes,
         tailscaleNodes,
         landing,
         landingNodes,

@@ -1,4 +1,4 @@
-import { LOW_COST_NODE_MATCHER, countriesMeta } from "./constants";
+import { countriesMeta } from "./constants";
 import type { ProxyNode } from "./types";
 
 const COUNTRY_REGEX_MAP = Object.fromEntries(
@@ -20,15 +20,6 @@ const COUNTRY_EXCLUDE_MAP = Object.fromEntries(
  */
 export function parseTailscale(nodes: ProxyNode[]): ProxyNode[] {
     return (nodes || []).filter((proxy) => proxy.type === "tailscale" || false);
-}
-
-/**
- * 从 Clash 配置中筛选出所有低价节点的名称。
- * @param config - 当前的 Clash 配置对象，需包含 `proxies` 字段
- * @returns 匹配低价节点正则的节点数组
- */
-export function parseLowCost(nodes: ProxyNode[]): ProxyNode[] {
-    return (nodes || []).filter((proxy) => LOW_COST_NODE_MATCHER.regex.test(proxy.name || ""));
 }
 
 /**

@@ -1,13 +1,8 @@
 import type { CountryMeta } from "./types";
-import { createCaseInsensitiveNodeMatcher } from "./utils";
 
 export const NODE_SUFFIX = "节点";
 export const CDN_URL = "https://cdn.jsdelivr.net";
 export const SPEEDTEST_URL = "https://cp.cloudflare.com";
-
-export const LOW_COST_NODE_MATCHER = createCaseInsensitiveNodeMatcher(
-    String.raw`0\.[0-5]|低倍率|省流|实验性`
-);
 
 export const PROXY_GROUPS = {
     SELECT: "选择代理",
@@ -15,7 +10,6 @@ export const PROXY_GROUPS = {
     AUTO: "自动选择",
     FALLBACK: "故障转移",
     LANDING: "落地节点",
-    LOW_COST: "低倍率节点",
     FRONT_PROXY: "前置代理",
     STATIC_RESOURCES: "静态资源",
     XAI: "XAI",

@@ -28,10 +28,7 @@ flowchart TD
         LCHK --> LAND["landing: boolean"]
         LCHK -->|"true: 用 nonLandingNodes"| PC["parseCountries()"]
         LCHK -->|"false: 用 config.proxies"| PC
-        LCHK -->|"true: 用 nonLandingNodes"| PLC["parseLowCost()"]
-        LCHK -->|"false: 用 config.proxies"| PLC
         PC --> CN["countryNodes (Record)"]
-        PLC --> LCN["lowCostNodes"]
         CN --> GACN["getActiveCountryNames()"]
         GACN --> ACN["countryNames (无后缀)"]
         FF --> GACN
@@ -40,7 +37,6 @@ flowchart TD
     subgraph Builders["4. 配置构建"]
         ACN --> BBL["buildBaseLists()"]
         LAND --> BBL
-        LCN --> BBL
         NLN --> BBL
         BBL --> BL["BaseLists"]
         BL --> BPG["buildProxyGroups()"]
@@ -48,7 +44,6 @@ flowchart TD
         CN --> BPG
         LAND --> BPG
         LN --> BPG
-        LCN --> BPG
         BPG --> PG["proxy-groups<br/>(含内联 country 代理组)"]
     end
 
@@ -71,7 +66,7 @@ flowchart TD
 |------|----------|------|
 | 输入 | — | 上游订阅传入的代理节点列表 (`config.proxies`) 与用户提供的 URL 覆写参数 (`$arguments`) |
 | 参数解析 | `src/args.ts` | 将原始字符串参数转换为类型安全的 `FeatureFlags` 对象，设置各项开关的默认值 |
-| 节点分类 | `src/node_parser.ts` | 将节点按三个维度分类：落地/非落地 (`parseNodesByLanding`)、所属国家/地区 (`parseCountries`)、低价节点 (`parseLowCost`)；提取活跃国家名称 (`getActiveCountryNames`) |
+| 节点分类 | `src/node_parser.ts` | 识别落地/非落地 (`parseNodesByLanding`)、所属国家/地区 (`parseCountries`) 和 Tailscale 节点 (`parseTailscale`)；提取活跃国家名称 (`getActiveCountryNames`) |
 | 配置构建 | `src/selectors.ts` + `src/proxy_groups.ts` | 先生成基础代理选择列表 (`BaseLists`)，再基于这些列表和节点分类结果生成完整的代理组定义（国家/地区代理组已内联于 `buildProxyGroups` 中） |
 | 最终组装 | `src/main.ts` | 将代理组、路由规则 (`buildRules`)、DNS 配置 (`buildDns`) 与 TUN 配置 (`buildTunConfig`) 拼装为最终输出的 `ClashConfig` |
 
@@ -82,8 +77,8 @@ flowchart TD
 | 文件 | 职责 | 关键导出 |
 |------|------|----------|
 | `src/args.ts` | URL 参数解析与默认值处理 | `buildFeatureFlags()`, `parseGroupType()` |
-| `src/constants.ts` | 常量集中管理（国家元数据、代理组名称、节点匹配器、CDN 地址等） | `countriesMeta`, `NODE_SUFFIX`, `PROXY_GROUPS`, `LOW_COST_NODE_MATCHER`, `LANDING_NODE_MATCHER` |
-| `src/node_parser.ts` | 多维度节点分类与过滤 | `parseNodesByLanding()`, `parseCountries()`, `parseLowCost()`, `getActiveCountryNames()` |
+| `src/constants.ts` | 常量集中管理（国家元数据、代理组名称、CDN 地址等） | `countriesMeta`, `NODE_SUFFIX`, `PROXY_GROUPS` |
+| `src/node_parser.ts` | 多维度节点分类与过滤 | `parseNodesByLanding()`, `parseCountries()`, `parseTailscale()`, `getActiveCountryNames()` |
 | `src/selectors.ts` | 代理选择列表构建（各策略组的基础选项列表） | `buildBaseLists()` |
 | `src/proxy_groups.ts` | 代理组定义生成（含内联国家代理组） | `buildProxyGroups()`, `buildGroupByType()` |
 | `src/rules.ts` | 路由规则构建 | `buildRules()` |
@@ -109,13 +104,13 @@ flowchart TD
 
 ### 节点分类
 
-节点在进入配置构建阶段前，经过三个独立维度的分类：
+节点在进入配置构建阶段前，进行以下识别：
 
-1. **落地/非落地** — 决定节点归属的代理组类型。当 `landing = true` 时，后续的国家和低价节点分类只扫描非落地节点（即落地节点不参与按国家分发）。
+1. **落地/非落地** — 决定链式代理的节点来源。当 `landing = true` 时，后续的国家分类只扫描非落地节点（即落地节点不参与按国家分发）。
 2. **国家/地区** — 通过正则匹配节点名称中的地理位置关键字，将节点归入对应的国家/地区分组。匹配规则定义在 `countriesMeta` 中。
-3. **低价节点** — 匹配特定正则 (`LOW_COST_NODE_MATCHER`) 的节点归入低价策略组，供用户按需选用。
+3. **Tailscale** — 从全部节点中识别 `type: tailscale`，供专用策略组、TUN 和分流规则使用。
 
-这三个分类维度相互独立，构建阶段通过组合它们来生成完整的代理组树。
+不再单独识别或生成低倍率策略组，也不会据此删除原始节点。
 
 ### 数据流
 

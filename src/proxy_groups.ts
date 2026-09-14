@@ -1,11 +1,4 @@
-import {
-    CDN_URL,
-    SPEEDTEST_URL,
-    LOW_COST_NODE_MATCHER,
-    NODE_SUFFIX,
-    PROXY_GROUPS,
-    countriesMeta,
-} from "./constants";
+import { CDN_URL, SPEEDTEST_URL, NODE_SUFFIX, PROXY_GROUPS, countriesMeta } from "./constants";
 import type { BuildProxyGroupsInput, GroupType, ProxyGroup } from "./types";
 import { isNotNull } from "./utils";
 
@@ -65,7 +58,6 @@ export function buildProxyGroups({
     groupType,
     countryNames,
     countryNodes,
-    lowCostNodes,
     tailscaleNodes,
     landing,
     landingNodes,
@@ -255,16 +247,6 @@ export function buildProxyGroups({
             interval: 60,
             tolerance: 20,
         },
-        lowCostNodes.length > 0 || regexFilter
-            ? buildGroupByType({
-                  name: PROXY_GROUPS.LOW_COST,
-                  icon: `${CDN_URL}/gh/Koolson/Qure@master/IconSet/Color/Lab.png`,
-                  groupType,
-                  nodeSource: !regexFilter
-                      ? { proxies: lowCostNodes.map((node) => node.name).filter(isNotNull) }
-                      : { "include-all": true as const, filter: LOW_COST_NODE_MATCHER.pattern },
-              })
-            : null,
         ...countryNames.map((country) => {
             const meta = countriesMeta[country];
             if (!meta) return null;

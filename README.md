@@ -12,7 +12,7 @@
 - 使用 GeoSite / GeoIP 及自定义 Rule Provider 进行细粒度分流。
 - 自动识别订阅中的国家 / 地区节点，并仅生成实际存在的地区策略组。
 - 支持 `select`、`url-test`、`load-balance` 三种地区策略组类型。
-- 支持低倍率节点、链式代理、Tailscale、Fake-IP、TUN、IPv6 等场景。
+- 支持链式代理、Tailscale、Fake-IP、TUN、IPv6 等场景。
 - JavaScript 动态覆写优先面向 Sub-Store 使用。
 
 > [!NOTE]
@@ -113,11 +113,7 @@ https://cdn.jsdelivr.net/gh/Lumintian/override-rules@dist/rename.min.js#flag&blg
 
 相关思路参考：[我有特别的 Surge 配置和使用技巧](https://blog.skk.moe/post/i-have-my-unique-surge-setup/)。
 
-### 低倍率节点
-
-脚本会根据节点名称识别部分低倍率 / 省流节点，并生成 `低倍率节点` 策略组。
-
-当前识别主要依赖名称中的倍率或相关关键字，因此建议在 Sub-Store 中统一倍率命名方式。
+脚本不再单独识别或生成 `低倍率节点` 策略组；原始节点仍保留，可通过地区组或 `手动选择` 使用。
 
 ### AI 服务
 
