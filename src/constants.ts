@@ -55,7 +55,7 @@ export const countriesMeta: Record<string, CountryMeta> = {
         weight: 20,
         pattern:
             "台|新北|彰化|\\b(?:TW|tw)(?:[-_ ]?\\d+(?:[-_ ]?[A-Za-z]{2,})?)?\\b|Taiwan|TAIWAN|TWN|TPE|ROC|🇹🇼|🇼🇸",
-        icon: `${CDN_URL}/gh/Koolson/Qure@master/IconSet/Color/Taiwan.png`,
+        icon: `${CDN_URL}/gh/Koolson/Qure@master/IconSet/Color/China.png`,
     },
     新加坡: {
         code: "sg",

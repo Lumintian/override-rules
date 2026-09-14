@@ -298,7 +298,7 @@ function iconFor(name: string): string {
     const regions: Record<string, string> = {
         香港: "🇭🇰",
         澳门: "🇲🇴",
-        台湾: "🇹🇼",
+        台湾: "🇨🇳",
         美国: "🇺🇸",
         日本: "🇯🇵",
         新加坡: "🇸🇬",
