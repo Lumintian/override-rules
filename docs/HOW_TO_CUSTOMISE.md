@@ -31,6 +31,12 @@ export function buildFeatureFlags(args: ScriptArgs): FeatureFlags {
         regexFilter: parseBool(args.regex),
         tunEnabled: parseBool(args.tun),
         countryThreshold: parseNumber(args.threshold, 0),
+        countryExtraCounts: Object.fromEntries(
+            Object.entries(countriesMeta).map(([country, meta]) => [
+                country,
+                parseExtraGroupCount(args[meta.code]),
+            ])
+        ),
     };
 }
 ```
@@ -79,15 +85,16 @@ export function buildProxyGroups({ /* 参数 */ }): ProxyGroup[] {
 
 ## 调整国家/地区匹配规则
 
-脚本会根据`countriesMeta`自动生成实际存在的代理组，因此只需修改国家/地区元数据即可。
+脚本会根据 `countriesMeta` 自动生成实际存在的代理组。调整匹配规则时修改元数据即可；新增地区时，还需在 `src/types.ts` 的 `CountryCode` 中加入对应参数代码，并同步 README 的参数表。
 
-在 `src/constants.ts` 的 `countriesMeta` 中，你可以修改节点的正则匹配 `pattern` 以及代理组显示的 `icon`。`weight` 用于控制代理组在列表中的排序（越小越靠前）。
+在 `src/constants.ts` 的 `countriesMeta` 中，你可以修改节点的正则匹配 `pattern` 以及代理组显示的 `icon`。`weight` 用于控制代理组在列表中的排序（越小越靠前），`code` 是额外手动组数量的参数名，例如 `us=2`。基础组和额外组由 `src/proxy_groups.ts` 的 `buildCountryGroups()` 统一构建。
 
 ```typescript
 // src/constants.ts
 export const countriesMeta: Record<string, CountryMeta> = {
     // ...
     印度尼西亚: {
+        code: "id", // 同时将 "id" 加入 src/types.ts 的 CountryCode
         pattern: "印尼|ID|Indonesia|🇮🇩",
         icon: "图标链接",
         weight: 0, // 示例：放在最前面

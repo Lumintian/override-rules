@@ -11,7 +11,7 @@
 - 集成 [SukkaW/Surge](https://github.com/SukkaW/Surge)、[217heidai/adblockfilters](https://github.com/217heidai/adblockfilters) 等规则源。
 - 使用 GeoSite / GeoIP 及自定义 Rule Provider 进行细粒度分流。
 - 自动识别订阅中的国家 / 地区节点，并仅生成实际存在的地区策略组。
-- 支持 `select`、`url-test`、`load-balance` 三种地区策略组类型。
+- 支持 `select`、`url-test`、`load-balance` 三种基础地区策略组类型，并可按地区添加多个独立的手动选择组。
 - 支持链式代理、Tailscale、Fake-IP、TUN、IPv6 等场景。
 - JavaScript 动态覆写优先面向 Sub-Store 使用。
 
@@ -41,17 +41,53 @@ https://cdn.jsdelivr.net/gh/Lumintian/override-rules/convert.min.js#grouptype=1&
 
 | 参数 | 说明 | 默认值 |
 | --- | --- | --- |
-| `grouptype` | 地区策略组类型：`0=select`、`1=url-test`、`2=load-balance` | `1` |
+| `grouptype` | 基础地区策略组类型：`0=select`、`1=url-test`、`2=load-balance`，不影响额外地区组 | `1` |
 | `ipv6` | 启用 IPv6 | `false` |
 | `full` | 生成完整 Mihomo 配置 | `false` |
 | `keepalive` | 启用 TCP Keep Alive | `false` |
 | `fakeip` | DNS 使用 Fake-IP；显式传 `false` 时使用 RedirHost | `true` |
 | `quic` | 允许 UDP 443 / QUIC 流量 | `false` |
-| `regex` | 地区组使用 `include-all + filter` 动态匹配节点 | `false` |
+| `regex` | 基础及额外地区组使用 `include-all + filter` 动态匹配节点 | `false` |
 | `tun` | 启用 TUN 模式 | `false` |
-| `threshold` | 某地区节点数量低于该值时不生成对应地区组 | `2` |
+| `threshold` | 某地区节点数量低于该值时不生成基础地区组，不影响额外地区组 | `2` |
+| `us`、`sg` 等地区代码 | 对应地区的额外手动选择组数量，整数 `0–100`；完整代码见下表 | `0` |
 
 布尔参数支持 `true / false` 或 `1 / 0`。
+
+### 额外地区组
+
+使用小写地区代码作为参数名，以数量为参数值。例如：
+
+```text
+https://cdn.jsdelivr.net/gh/Lumintian/override-rules/convert.min.js#grouptype=1&us=2&sg=1
+```
+
+当订阅中存在对应地区的候选节点时，将生成 `美国额外1`、`美国额外2`、`新加坡额外1`。这些组全部固定为 `select`，每组都包含对应地区的候选节点，可以分别手动选择不同节点，供不同服务使用；不是对地区节点进行分片，也不是只引用原有的 `美国节点` 等基础组。
+
+| 参数 | 地区 | 参数 | 地区 |
+| --- | --- | --- | --- |
+| `hk` | 香港 | `mo` | 澳门 |
+| `tw` | 台湾 | `sg` | 新加坡 |
+| `jp` | 日本 | `kr` | 韩国 |
+| `us` | 美国 | `ca` | 加拿大 |
+| `uk` | 英国 | `au` | 澳大利亚 |
+| `de` | 德国 | `fr` | 法国 |
+| `ru` | 俄罗斯 | `th` | 泰国 |
+| `in` | 印度 | `my` | 马来西亚 |
+| `ar` | 阿根廷 | `fi` | 芬兰 |
+| `eg` | 埃及 | `ph` | 菲律宾 |
+| `tr` | 土耳其 | `ua` | 乌克兰 |
+
+生成规则：
+
+- 未传参数或值为 `0` 时不生成额外组。负数、小数、非数字或大于 `100` 的值均按 `0` 处理；数量上限用于防止误配置生成过多策略组。
+- 额外组不受 `grouptype` 和 `threshold` 影响。例如美国只有一个候选节点时，默认不生成 `美国节点`，但 `us=2` 仍会生成两个美国额外组。没有对应地区候选节点时不生成空组，即使启用了 `regex=true`。
+- 额外组复用基础地区组的节点来源规则：默认枚举当前节点；`regex=true` 时使用相同的地区正则和排除正则。链式代理激活时，生成资格及枚举成员只依据非落地节点；正则模式仍沿用 `include-all + filter`，不额外按 `dialer-proxy` 排除运行时节点。
+- 组按地区权重排序，同一地区的基础组在前，额外组按编号排列在后。
+- 额外组加入 `选择代理`、通用服务分流列表、启用时的 `前置代理` 以及 `GLOBAL`。哔哩哔哩和巴哈姆特的地区专用列表也会加入对应地区的额外组。
+- `自动选择`、`故障转移` 仍只使用原有基础地区组和启用时的落地组，不自动纳入额外手动组。
+
+这些数量参数供 JavaScript 动态覆写使用，预生成 YAML 的组合不包含额外地区组。
 
 ## 补充说明
 

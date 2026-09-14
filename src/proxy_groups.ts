@@ -1,5 +1,11 @@
 import { CDN_URL, SPEEDTEST_URL, NODE_SUFFIX, PROXY_GROUPS, countriesMeta } from "./constants";
-import type { BuildProxyGroupsInput, GroupType, ProxyGroup } from "./types";
+import { getActiveCountryNames } from "./node_parser";
+import type {
+    BuildCountryGroupsInput,
+    BuildProxyGroupsInput,
+    GroupType,
+    ProxyGroup,
+} from "./types";
 import { isNotNull } from "./utils";
 
 interface BuildGroupByTypeInput {
@@ -48,16 +54,58 @@ function buildGroupByType({
 }
 
 /**
- * 生成所有代理组配置，包含内联的国家地区代理组。
+ * 生成基础地区组和手动指定的额外 select 组，统一节点来源及排列顺序。
+ * 基础组遵循 threshold；额外组仅要求该地区至少有一个候选节点。
+ */
+export function buildCountryGroups({
+    regexFilter,
+    groupType,
+    countryNames,
+    countryNodes,
+    countryExtraCounts,
+}: BuildCountryGroupsInput): ProxyGroup[] {
+    return getActiveCountryNames(countryNodes, 1).flatMap((country) => {
+        const meta = countriesMeta[country];
+        const nodeSource: BuildGroupByTypeInput["nodeSource"] = regexFilter
+            ? {
+                  "include-all": true,
+                  filter: meta.pattern,
+                  ...(meta.excludePattern ? { "exclude-filter": meta.excludePattern } : {}),
+              }
+            : { proxies: countryNodes[country].map((node) => node.name).filter(isNotNull) };
+        const groups: ProxyGroup[] = [];
+        if (countryNames.includes(country)) {
+            groups.push(
+                buildGroupByType({
+                    name: `${country}${NODE_SUFFIX}`,
+                    icon: meta.icon,
+                    groupType,
+                    nodeSource,
+                })
+            );
+        }
+        const extraCount = countryExtraCounts[country] ?? 0;
+        for (let index = 1; index <= extraCount; index += 1) {
+            groups.push({
+                name: `${country}额外${index}`,
+                icon: meta.icon,
+                type: "select",
+                ...nodeSource,
+            });
+        }
+        return groups;
+    });
+}
+
+/**
+ * 生成所有代理组配置，包含已构建的基础地区组和额外地区组。
  * @param input - 构建代理组所需的输入参数（详见 BuildProxyGroupsInput）
  * @returns 代理组配置数组
  */
 export function buildProxyGroups({
     allNodes,
-    regexFilter,
-    groupType,
     countryNames,
-    countryNodes,
+    countryGroups,
     tailscaleNodes,
     landing,
     landingNodes,
@@ -70,6 +118,13 @@ export function buildProxyGroups({
     const hasTW = countryNames.includes("台湾");
     const hasHK = countryNames.includes("香港");
     const hasTailscale = tailscaleNodes.length > 0;
+    const countryGroupNames = (country: string): string[] =>
+        countryGroups
+            .filter(
+                ({ name }) =>
+                    name === `${country}${NODE_SUFFIX}` || name.startsWith(`${country}额外`)
+            )
+            .map(({ name }) => name);
     const groups: Array<ProxyGroup | null> = [
         {
             name: PROXY_GROUPS.SELECT,
@@ -163,14 +218,17 @@ export function buildProxyGroups({
             name: PROXY_GROUPS.BILIBILI,
             icon: `${CDN_URL}/gh/Koolson/Qure@master/IconSet/Color/bilibili.png`,
             type: "select",
-            proxies: hasTW && hasHK ? ["DIRECT", `台湾节点`, `香港节点`] : defaultProxiesDirect,
+            proxies:
+                hasTW && hasHK
+                    ? ["DIRECT", ...countryGroupNames("台湾"), ...countryGroupNames("香港")]
+                    : defaultProxiesDirect,
         },
         {
             name: PROXY_GROUPS.BAHAMUT,
             icon: `${CDN_URL}/gh/Koolson/Qure@master/IconSet/Color/Bahamut.png`,
             type: "select",
             proxies: hasTW
-                ? [`台湾节点`, PROXY_GROUPS.SELECT, PROXY_GROUPS.MANUAL, "DIRECT"]
+                ? [...countryGroupNames("台湾"), PROXY_GROUPS.SELECT, PROXY_GROUPS.MANUAL, "DIRECT"]
                 : defaultProxies,
         },
         {
@@ -247,23 +305,7 @@ export function buildProxyGroups({
             interval: 60,
             tolerance: 20,
         },
-        ...countryNames.map((country) => {
-            const meta = countriesMeta[country];
-            if (!meta) return null;
-            const nodeSource = regexFilter
-                ? {
-                      "include-all": true as const,
-                      filter: meta.pattern,
-                      ...(meta.excludePattern ? { "exclude-filter": meta.excludePattern } : {}),
-                  }
-                : { proxies: countryNodes[country]?.map((n) => n.name).filter(isNotNull) };
-            return buildGroupByType({
-                name: `${country}${NODE_SUFFIX}`,
-                icon: meta.icon,
-                groupType,
-                nodeSource,
-            });
-        }),
+        ...countryGroups,
     ];
 
     return groups.filter(isNotNull);

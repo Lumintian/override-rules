@@ -35,16 +35,21 @@ flowchart TD
     end
 
     subgraph Builders["4. 配置构建"]
-        ACN --> BBL["buildBaseLists()"]
+        ACN --> BCG["buildCountryGroups()"]
+        CN --> BCG
+        FF --> BCG
+        BCG --> CG["countryGroups (基础组 + 额外 select 组)"]
+        CG --> BBL["buildBaseLists()"]
+        ACN --> BBL
         LAND --> BBL
         NLN --> BBL
         BBL --> BL["BaseLists"]
         BL --> BPG["buildProxyGroups()"]
         ACN --> BPG
-        CN --> BPG
+        CG --> BPG
         LAND --> BPG
         LN --> BPG
-        BPG --> PG["proxy-groups<br/>(含内联 country 代理组)"]
+        BPG --> PG["proxy-groups<br/>(含基础及额外地区组)"]
     end
 
     subgraph Output["5. 最终组装 (main.ts)"]
@@ -67,7 +72,7 @@ flowchart TD
 | 输入 | — | 上游订阅传入的代理节点列表 (`config.proxies`) 与用户提供的 URL 覆写参数 (`$arguments`) |
 | 参数解析 | `src/args.ts` | 将原始字符串参数转换为类型安全的 `FeatureFlags` 对象，设置各项开关的默认值 |
 | 节点分类 | `src/node_parser.ts` | 识别落地/非落地 (`parseNodesByLanding`)、所属国家/地区 (`parseCountries`) 和 Tailscale 节点 (`parseTailscale`)；提取活跃国家名称 (`getActiveCountryNames`) |
-| 配置构建 | `src/selectors.ts` + `src/proxy_groups.ts` | 先生成基础代理选择列表 (`BaseLists`)，再基于这些列表和节点分类结果生成完整的代理组定义（国家/地区代理组已内联于 `buildProxyGroups` 中） |
+| 配置构建 | `src/selectors.ts` + `src/proxy_groups.ts` | 先生成基础及额外地区组 (`buildCountryGroups`)，据此生成基础代理选择列表 (`BaseLists`)，最后组装完整的代理组定义 |
 | 最终组装 | `src/main.ts` | 将代理组、路由规则 (`buildRules`)、DNS 配置 (`buildDns`) 与 TUN 配置 (`buildTunConfig`) 拼装为最终输出的 `ClashConfig` |
 
 ---
@@ -80,7 +85,7 @@ flowchart TD
 | `src/constants.ts` | 常量集中管理（国家元数据、代理组名称、CDN 地址等） | `countriesMeta`, `NODE_SUFFIX`, `PROXY_GROUPS` |
 | `src/node_parser.ts` | 多维度节点分类与过滤 | `parseNodesByLanding()`, `parseCountries()`, `parseTailscale()`, `getActiveCountryNames()` |
 | `src/selectors.ts` | 代理选择列表构建（各策略组的基础选项列表） | `buildBaseLists()` |
-| `src/proxy_groups.ts` | 代理组定义生成（含内联国家代理组） | `buildProxyGroups()`, `buildGroupByType()` |
+| `src/proxy_groups.ts` | 代理组定义生成（含基础及额外地区组） | `buildCountryGroups()`, `buildProxyGroups()`, `buildGroupByType()` |
 | `src/rules.ts` | 路由规则构建 | `buildRules()` |
 | `src/dns.ts` | DNS 配置构建 | `buildDns()`, `snifferConfig` |
 | `src/tun.ts` | TUN 模式配置构建 | `buildTunConfig()` |
@@ -114,13 +119,21 @@ flowchart TD
 
 ### 数据流
 
-- **减少中间类型**：`parseCountries()` 直接返回 `Record<string, ProxyNode[]>` 而非引入额外的中间结构。`getActiveCountryNames()` 返回纯净的国家名称（不含 `"节点"` 后缀）。国家代理组的构建逻辑已内联于 `buildProxyGroups()` 中，不再需要独立的 `buildCountryProxyGroups()` 函数。
-- **`NODE_SUFFIX` 仅在展示层添加**：`"节点"` 后缀（如「香港」→「香港节点」）只在 `buildBaseLists()` 和 `buildProxyGroups()` 中拼接，分类层完全不涉及此概念。
+- **统一地区组构建**：`parseCountries()` 返回 `Record<string, ProxyNode[]>`，`getActiveCountryNames()` 返回不含后缀的地区名。`buildCountryGroups()` 统一生成基础地区组和额外地区组，供 `buildBaseLists()` 生成选择列表，并由 `buildProxyGroups()` 合入最终配置，避免组定义和引用不同步。
+- **名称仅在构建层添加**：`"节点"` 后缀（如「香港」→「香港节点」）和 `"额外N"`（如「美国额外1」）不进入分类层；额外组与基础组复用同一份节点来源规则。
 - **数据优于标志**：接收节点信息的参数统一使用具体数据（如 `landingNodes: ProxyNode[]`、`countryNodes: Record<string, ProxyNode[]>`）而非布尔值。布尔标志（如 `landing`）由数据推导得出，保证了判定依据的可追溯性。
 
 ### args.ts 的默认值
 
 所有 URL 参数都有明确的默认值。`buildFeatureFlags()` 负责解析并回填默认值，产出类型安全的 `FeatureFlags` 对象。这使得下游模块无需关心参数来源或缺失情况——每个标志都有确定的值。
+
+### 额外地区组参数
+
+`countriesMeta.code` 定义各地区的数量参数名，例如 `us`、`sg`；类型范围由 `CountryCode` 维护。`buildFeatureFlags()` 将参数解析为以地区名称为键的 `countryExtraCounts`。数量只接受 `0–100` 的整数，缺省或非法值为 `0`。
+
+`buildCountryGroups()` 按地区权重遍历至少有一个候选节点的地区：基础组遵循 `countryThreshold` 和 `groupType`，额外组按显式数量生成，固定为 `select`，名称为「地区额外1」「地区额外2」等。无该地区节点时不生成空组。两类组均遵循 `regexFilter`，所以正则模式也保留运行时独立匹配及不按 `dialer-proxy` 排除成员的现有行为。
+
+额外组加入手动选择用途的服务列表和前置代理列表，不进入 `defaultFallback`，以保持原有自动选择 / 故障转移的候选范围。
 
 ### YAML Generator 的参数
 
@@ -136,7 +149,7 @@ flowchart TD
 | `tun` | true / false | 2 |
 | `grouptype` | select / url-test / load-balance | 3 |
 
-共计 2⁶ × 3 = 192 个 YAML 文件。`landing` 不在 FLAGS 中——YAML 生成器使用 `fake_proxies.json` 中的模拟节点数据自动判定。生成时固定启用 `regex: true`，因为静态配置无法预知实际订阅的节点名称。
+共计 2⁶ × 3 = 192 个 YAML 文件。`landing` 不在 FLAGS 中——YAML 生成器使用 `fake_proxies.json` 中的模拟节点数据自动判定。生成时固定启用 `regex: true`，因为静态配置无法预知实际订阅的节点名称。地区额外组数量保持默认 `0`，不参与预生成组合。
 
 ---
 

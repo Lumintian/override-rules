@@ -3,7 +3,7 @@ Lumintian/override-rules 的 Sub-Store 订阅转换脚本
 https://github.com/Lumintian/override-rules
 
 支持的传入参数：
-- grouptype: 地区代理组类型（0=select 手动选择, 1=url-test 自动测速, 2=load-balance 负载均衡，默认 1）
+- grouptype: 基础地区代理组类型（0=select 手动选择, 1=url-test 自动测速, 2=load-balance 负载均衡，默认 1）
 - landing: auto-detected from nodes with `dialer-proxy` field; no user parameter needed
 - ipv6: 启用 IPv6 支持（默认 false）
 - tun: 启用 TUN 模式（默认 false）
@@ -11,15 +11,16 @@ https://github.com/Lumintian/override-rules
 - keepalive: 启用 tcp-keep-alive（默认 false）
 - fakeip: DNS 使用 FakeIP 模式（默认 true；传 false 时为 RedirHost）
 - quic: 允许 QUIC 流量（UDP 443，默认 false）
-- threshold: 地区节点数量小于该值时不显示分组 (默认 2)
-- regex: 使用正则过滤模式（include-all + filter）写入各地区代理组，而非直接枚举节点名称（默认 false）
+- threshold: 地区节点数量小于该值时不显示基础地区组 (默认 2，不影响额外组)
+- regex: 使用正则过滤模式（include-all + filter）写入基础及额外地区组，而非直接枚举节点名称（默认 false）
+- hk/mo/tw/sg/jp/kr/us/ca/uk/au/de/fr/ru/th/in/my/ar/fi/eg/ph/tr/ua: 对应地区额外 select 组数量（0–100 的整数，默认 0；非法值视为 0），如 us=2&sg=1；无对应地区节点时不生成
 
 源码位于 `src/*.ts`。
 */
 
 import { CDN_URL, PROXY_GROUPS } from "./constants";
 import { buildFeatureFlags } from "./args";
-import { buildProxyGroups } from "./proxy_groups";
+import { buildCountryGroups, buildProxyGroups } from "./proxy_groups";
 import {
     getActiveCountryNames,
     parseCountries,
@@ -61,6 +62,7 @@ const {
     regexFilter,
     tunEnabled,
     countryThreshold,
+    countryExtraCounts,
 } = buildFeatureFlags(rawArgs);
 
 function main(config: ClashConfig): ClashConfig {
@@ -71,6 +73,13 @@ function main(config: ClashConfig): ClashConfig {
     const landing = landingNodes.length > 0 && nonLandingNodes.length > 0;
     const countryNodes = parseCountries(landing ? nonLandingNodes : config.proxies);
     const countryNames = getActiveCountryNames(countryNodes, countryThreshold);
+    const countryGroups = buildCountryGroups({
+        regexFilter,
+        groupType,
+        countryNames,
+        countryNodes,
+        countryExtraCounts,
+    });
     const allNodes = config.proxies.map((node) => node.name);
     const tailscaleNodes = parseTailscale(config.proxies);
     const hasTailscale = tailscaleNodes.length > 0;
@@ -84,16 +93,15 @@ function main(config: ClashConfig): ClashConfig {
     } = buildBaseLists({
         landing,
         countryNames,
+        countryGroups,
         nonLandingNodes,
         regexFilter,
     });
 
     const proxyGroups = buildProxyGroups({
         allNodes,
-        regexFilter,
-        groupType,
         countryNames,
-        countryNodes,
+        countryGroups,
         tailscaleNodes,
         landing,
         landingNodes,

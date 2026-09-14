@@ -1,3 +1,4 @@
+import { countriesMeta } from "./constants";
 import { parseBool, parseNumber } from "./utils";
 import type { FeatureFlags, GroupType, ScriptArgs } from "./types";
 
@@ -16,6 +17,17 @@ function parseGroupType(args: ScriptArgs): GroupType {
     return 1;
 }
 
+// 防止错误参数生成过多策略组；超出范围的值视为未启用。
+const MAX_EXTRA_GROUPS_PER_COUNTRY = 100;
+
+function parseExtraGroupCount(value: unknown): number {
+    if (typeof value !== "string" && typeof value !== "number") return 0;
+    const text = String(value).trim();
+    if (!/^\d+$/.test(text)) return 0;
+    const count = Number(text);
+    return Number.isSafeInteger(count) && count <= MAX_EXTRA_GROUPS_PER_COUNTRY ? count : 0;
+}
+
 /**
  * 解析传入的脚本参数，并将其转换为内部使用的功能开关（feature flags）。
  * @param args - 从外部脚本环境（如 Substore）传入的原始参数对象
@@ -32,5 +44,11 @@ export function buildFeatureFlags(args: ScriptArgs): FeatureFlags {
         regexFilter: parseBool(args.regex),
         tunEnabled: parseBool(args.tun),
         countryThreshold: parseNumber(args.threshold, 2),
+        countryExtraCounts: Object.fromEntries(
+            Object.entries(countriesMeta).map(([country, meta]) => [
+                country,
+                parseExtraGroupCount(args[meta.code]),
+            ])
+        ),
     };
 }

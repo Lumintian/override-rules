@@ -1,4 +1,28 @@
-export interface ScriptArgs {
+export type CountryCode =
+    | "hk"
+    | "mo"
+    | "tw"
+    | "sg"
+    | "jp"
+    | "kr"
+    | "us"
+    | "ca"
+    | "uk"
+    | "au"
+    | "de"
+    | "fr"
+    | "ru"
+    | "th"
+    | "in"
+    | "my"
+    | "ar"
+    | "fi"
+    | "eg"
+    | "ph"
+    | "tr"
+    | "ua";
+
+export interface ScriptArgs extends Partial<Record<CountryCode, string>> {
     grouptype?: string;
     ipv6?: string;
     full?: string;
@@ -21,6 +45,7 @@ export interface FeatureFlags {
     quicEnabled: boolean;
     regexFilter: boolean;
     countryThreshold: number;
+    countryExtraCounts: Record<string, number>;
     tunEnabled: boolean;
 }
 
@@ -183,6 +208,7 @@ export interface ClashConfig {
 }
 
 export interface CountryMeta {
+    code: CountryCode;
     weight?: number;
     pattern: string;
     icon: string;
@@ -200,16 +226,23 @@ export interface BaseLists {
 export interface BuildBaseListsInput {
     landing: boolean;
     countryNames: string[];
+    countryGroups: ProxyGroup[];
     nonLandingNodes: ProxyNode[];
     regexFilter: boolean;
 }
 
-export interface BuildProxyGroupsInput {
-    allNodes: string[];
+export interface BuildCountryGroupsInput {
     regexFilter: boolean;
     groupType: GroupType;
     countryNames: string[];
     countryNodes: Record<string, ProxyNode[]>;
+    countryExtraCounts: Record<string, number>;
+}
+
+export interface BuildProxyGroupsInput {
+    allNodes: string[];
+    countryNames: string[];
+    countryGroups: ProxyGroup[];
     landing: boolean;
     landingNodes: ProxyNode[];
     tailscaleNodes: ProxyNode[];
