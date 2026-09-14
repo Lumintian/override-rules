@@ -44,9 +44,11 @@ jobs:
 
           mkdir -p publish/yamls
 
-          cp convert.js publish/convert.js
-          cp convert.min.js publish/convert.min.js
-          cp -a yamls/. publish/yamls/
+          cp dist/convert.js publish/convert.js
+          cp dist/convert.min.js publish/convert.min.js
+          cp dist/rename.js publish/rename.js
+          cp dist/rename.min.js publish/rename.min.js
+          cp -a dist/yamls/. publish/yamls/
 
           RELEASED_AT="$(date -u +'%Y-%m-%dT%H:%M:%SZ')"
           export RELEASED_AT
