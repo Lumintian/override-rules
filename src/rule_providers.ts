@@ -10,14 +10,6 @@ export const ruleProviders: Record<string, RuleProvider> = {
         url: `${CDN_URL}/gh/217heidai/adblockfilters@main/rules/adblockmihomolite.yaml`,
         path: "./ruleset/ADBlock.yaml",
     },
-    SogouInput: {
-        type: "http",
-        behavior: "classical",
-        format: "text",
-        interval: 86400,
-        url: "https://ruleset.skk.moe/Clash/non_ip/sogouinput.txt",
-        path: "./ruleset/SogouInput.txt",
-    },
     StaticResources: {
         type: "http",
         behavior: "domain",
@@ -89,14 +81,6 @@ export const ruleProviders: Record<string, RuleProvider> = {
         interval: 86400,
         url: `${CDN_URL}/gh/Lumintian/override-rules@main/ruleset/Crypto.list`,
         path: "./ruleset/Crypto.list",
-    },
-    Weibo: {
-        type: "http",
-        behavior: "classical",
-        format: "text",
-        interval: 86400,
-        url: `${CDN_URL}/gh/Lumintian/override-rules@main/ruleset/Weibo.list`,
-        path: "./ruleset/Weibo.list",
     },
     GFWList: {
         type: "http",

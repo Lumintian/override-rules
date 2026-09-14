@@ -169,11 +169,15 @@ dialer-proxy: "前置代理"
 
 当前识别主要依赖名称中的倍率或相关关键字，因此建议在 Sub-Store 中统一倍率命名方式。
 
-### 搜狗输入法
+### AI 服务
 
-`搜狗输入法` 策略组默认可以在 `DIRECT` 与 `REJECT` 之间选择。
+AI 流量按以下优先级分流：
 
-如果更关注隐私，可以选择 `REJECT`；这可能影响账号同步、词库更新和问题反馈等功能。
+1. `XAI`：匹配 `GEOSITE,xai` 以及域名关键字 `grok`。
+2. `ChatGPT`：匹配 `GEOSITE,openai`。
+3. `AI服务`：通过 `GEOSITE,category-ai-!cn` 承接其余海外 AI 服务。
+
+具体服务规则位于通用 AI 分类规则之前，避免 XAI 和 ChatGPT 流量被 `AI服务` 提前匹配。
 
 ### Tailscale
 

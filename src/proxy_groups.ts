@@ -77,7 +77,6 @@ export function buildProxyGroups({
 }: BuildProxyGroupsInput): ProxyGroup[] {
     const hasTW = countryNames.includes("台湾");
     const hasHK = countryNames.includes("香港");
-    const hasUS = countryNames.includes("美国");
     const hasTailscale = tailscaleNodes.length > 0;
     const groups: Array<ProxyGroup | null> = [
         {
@@ -111,6 +110,18 @@ export function buildProxyGroups({
         {
             name: PROXY_GROUPS.STATIC_RESOURCES,
             icon: `${CDN_URL}/gh/Koolson/Qure@master/IconSet/Color/Cloudflare.png`,
+            type: "select",
+            proxies: defaultProxies,
+        },
+        {
+            name: PROXY_GROUPS.XAI,
+            icon: `${CDN_URL}/gh/Koolson/Qure@master/IconSet/Color/Bot.png`,
+            type: "select",
+            proxies: defaultProxies,
+        },
+        {
+            name: PROXY_GROUPS.CHATGPT,
+            icon: `${CDN_URL}/gh/Koolson/Qure@master/IconSet/Color/ChatGPT.png`,
             type: "select",
             proxies: defaultProxies,
         },
@@ -177,26 +188,8 @@ export function buildProxyGroups({
             proxies: defaultProxies,
         },
         {
-            name: PROXY_GROUPS.TWITCH,
-            icon: `${CDN_URL}/gh/Koolson/Qure@master/IconSet/Color/Twitch.png`,
-            type: "select",
-            proxies: defaultProxies,
-        },
-        {
-            name: PROXY_GROUPS.NETFLIX,
-            icon: `${CDN_URL}/gh/Koolson/Qure@master/IconSet/Color/Netflix.png`,
-            type: "select",
-            proxies: defaultProxies,
-        },
-        {
             name: PROXY_GROUPS.TIKTOK,
             icon: `${CDN_URL}/gh/Koolson/Qure@master/IconSet/Color/TikTok.png`,
-            type: "select",
-            proxies: defaultProxies,
-        },
-        {
-            name: PROXY_GROUPS.SPOTIFY,
-            icon: `${CDN_URL}/gh/Koolson/Qure@master/IconSet/Color/Spotify.png`,
             type: "select",
             proxies: defaultProxies,
         },
@@ -213,21 +206,6 @@ export function buildProxyGroups({
             proxies: defaultProxies,
         },
         {
-            name: PROXY_GROUPS.WEIBO,
-            icon: `${CDN_URL}/gh/Koolson/Qure@master/IconSet/Color/Weibo.png`,
-            type: "select",
-            "include-all": true,
-            proxies: defaultProxiesDirect,
-        },
-        {
-            name: PROXY_GROUPS.TRUTH_SOCIAL,
-            icon: `${CDN_URL}/gh/Lumintian/override-rules@main/icons/Truth_Social.png`,
-            type: "select",
-            proxies: hasUS
-                ? [`美国节点`, PROXY_GROUPS.SELECT, PROXY_GROUPS.MANUAL]
-                : defaultProxies,
-        },
-        {
             name: PROXY_GROUPS.EHENTAI,
             icon: `${CDN_URL}/gh/Lumintian/override-rules@main/icons/Ehentai.png`,
             type: "select",
@@ -238,12 +216,6 @@ export function buildProxyGroups({
             icon: `${CDN_URL}/gh/Lumintian/override-rules@main/icons/PikPak.png`,
             type: "select",
             proxies: defaultProxies,
-        },
-        {
-            name: PROXY_GROUPS.SOGOU_INPUT,
-            icon: `${CDN_URL}/gh/Lumintian/override-rules@main/icons/Sougou.png`,
-            type: "select",
-            proxies: ["DIRECT", "REJECT"],
         },
         hasTailscale
             ? {
