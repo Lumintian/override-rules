@@ -1,9 +1,9 @@
 /**
  * YAML 生成器
- * 使用 fake_proxies.json 中的假代理列表，载入 convert.js，
+ * 使用 fake_proxies.json 中的假代理列表，载入 dist/convert.js，
  * 组合不同参数调用其 main(config) 生成 Clash/Stash 配置，并输出为 YAML 文件。
  *
- * 支持的布尔参数在下面的 FLAGS 数组中定义，与 convert.js 内保持一致。
+ * 支持的布尔参数在下面的 FLAGS 数组中定义，与 dist/convert.js 内保持一致。
  * grouptype 参数（0=select, 1=url-test, 2=load-balance）控制代理组类型。
  * 生成所有可能的参数组合（布尔标志 × grouptype），文件名基于参数动态生成。
  *
@@ -31,9 +31,10 @@ const __dirname = path.dirname(__filename);
 
 const BASE_DIR = path.resolve(__dirname, "../..");
 const GENERATOR_DIR = __dirname;
-const CONVERT_FILE = path.join(BASE_DIR, "convert.js");
+const DIST_DIR = path.join(BASE_DIR, "dist");
+const CONVERT_FILE = path.join(DIST_DIR, "convert.js");
 const FAKE_PROXIES_FILE = path.join(GENERATOR_DIR, "fake_proxies.json");
-const OUTPUT_DIR = path.join(BASE_DIR, "yamls");
+const OUTPUT_DIR = path.join(DIST_DIR, "yamls");
 
 const FLAGS = ["ipv6", "full", "keepalive", "fakeip", "quic", "tun"] as const;
 
@@ -100,10 +101,10 @@ function runConvert(baseConfig: ClashConfig, args: ComboArgs): ClashConfig {
     };
 
     vm.createContext(sandbox);
-    vm.runInContext(code, sandbox, { filename: "convert.js" });
+    vm.runInContext(code, sandbox, { filename: "dist/convert.js" });
 
     if (typeof sandbox.main !== "function") {
-        throw new Error("convert.js 未暴露 main 函数 (未在顶层定义?)");
+        throw new Error("dist/convert.js 未暴露 main 函数 (未在顶层定义?)");
     }
 
     const configCopy = JSON.parse(JSON.stringify(baseConfig)) as ClashConfig;
@@ -158,7 +159,7 @@ function resolveLimit(total: number): number {
 
 export function main(): void {
     if (!existsSync(CONVERT_FILE)) {
-        throw new Error("未找到 convert.js，请先运行 npm run build");
+        throw new Error("未找到 dist/convert.js，请先运行 npm run build");
     }
 
     const baseConfig = loadFakeConfig();

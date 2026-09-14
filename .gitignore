@@ -2,11 +2,7 @@
 node_modules/
 
 # Build artifacts
-convert.js
-convert.min.js
-rename.js
-rename.min.js
-yamls/
+dist/
 
 # Logs
 npm-debug.log*

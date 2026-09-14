@@ -1,9 +1,5 @@
 # 自动生成的文件
-yamls/
-convert.js
-convert.min.js
-rename.js
-rename.min.js
+dist/
 
 # 依赖
 node_modules/

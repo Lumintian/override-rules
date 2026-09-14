@@ -11,11 +11,7 @@ export default [
     // 全局忽略
     {
         ignores: [
-            "yamls/**",
-            "convert.js",
-            "convert.min.js",
-            "rename.js",
-            "rename.min.js",
+            "dist/**",
             "node_modules/**",
         ],
     },
