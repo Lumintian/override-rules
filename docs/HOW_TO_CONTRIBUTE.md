@@ -9,7 +9,7 @@
 - **源文件驱动**：所有核心逻辑均采用 TypeScript 编写，存放在 `src/` 与 `scripts/yaml_generator/` 目录中。
   - `src/main.ts`：JS 动态覆写脚本的核心入口。
   - `scripts/yaml_generator/generator.ts`：YAML 静态覆写文件的生成逻辑。
-- **禁止直接修改产物**：根目录下的 `convert.js`、`convert.min.js` 以及 `yamls/` 目录内容属于自动生成的构建产物，并由 GitHub Actions 在发布时处理。不要直接编辑这些产物文件，所有修改应从 `.ts` 源码开始。
+- **禁止直接修改产物**：`dist/` 下的 `convert.js`、`convert.min.js`、`rename.js`、`rename.min.js` 以及 `yamls/` 属于自动生成的构建产物，并由 GitHub Actions 在发布时处理。不要直接编辑这些产物文件，所有修改应从 `.ts` 源码开始。
 - **构建工具链**：项目使用 `esbuild` 进行打包和压缩，通过 `scripts/build.mjs` 生成 JavaScript 覆写产物。
 
 ## 🛠️ 开发与构建工作流
@@ -31,8 +31,8 @@
    ```
 
 4. 构建并生成测试产物：
-   - `npm run build`：运行 `scripts/build.mjs`，生成 `convert.js` 与 `convert.min.js`。
-   - `npm run generate`：运行 YAML 生成器，更新本地 `yamls/` 目录。
+   - `npm run build`：运行 `scripts/build.mjs`，在 `dist/` 生成 `convert.js`、`convert.min.js`、`rename.js` 与 `rename.min.js`。
+   - `npm run generate`：运行 YAML 生成器，更新本地 `dist/yamls/` 目录。
    - `npm run artifacts`：依次执行构建与 YAML 生成。
 
 建议在提交核心逻辑修改前运行 `npm run artifacts`，确认构建与生成过程没有报错。
@@ -41,7 +41,7 @@
 
 1. **分离提交**：核心功能、文档和纯格式调整尽量按有意义的逻辑拆分。
 2. **文档同步**：新增、删除或修改 URL 参数、策略组或 YAML 组合时，应同步修改 `README.md` 和相关文档。
-3. **不要提交构建产物**：PR 中不要包含手工修改的 `convert.js`、`convert.min.js` 或 `yamls/` 文件。
+3. **不要提交构建产物**：PR 中不要包含手工修改的 `dist/` 文件。
 4. **说明行为变化**：涉及节点分类、代理组选择、DNS、TUN 或规则行为变化时，请说明用户可观察到的影响。
 
 ## 🚀 发布流程

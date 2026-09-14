@@ -45,7 +45,7 @@ export function buildFeatureFlags(args: ScriptArgs): FeatureFlags {
 
 `scripts/substore/rename.ts` 是本项目维护的节点预处理源码。它以 FengNinger 的脚本为初始基础，但会随本项目的地区识别、倍率、家宽、自建和落地节点约定独立演进。
 
-修改后运行 `npm run build`，根目录会生成供 Sub-Store 执行的 `rename.js` 和 `rename.min.js`。这两个文件是构建产物，不应直接编辑或提交到源码分支。
+修改后运行 `npm run build`，`dist/` 会生成供 Sub-Store 执行的 `rename.js` 和 `rename.min.js`。这两个文件是构建产物，不应直接编辑或提交到源码分支。
 
 如果调整了重命名输出格式或保留标签，请同步检查 `src/constants.ts` 和 `src/node_parser.ts` 中的匹配规则，确保预处理结果仍能被 Mihomo 覆写正确识别。
 

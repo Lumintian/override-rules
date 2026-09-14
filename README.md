@@ -240,7 +240,7 @@ https://cdn.jsdelivr.net/gh/Lumintian/override-rules/convert.min.js
 
 ## 预生成 YAML
 
-源码主分支不跟踪 `convert.js`、`convert.min.js` 与 `yamls/` 等构建产物。
+源码主分支不跟踪 `dist/` 下的构建产物。
 
 发布时通过 GitHub Actions：
 

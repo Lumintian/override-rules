@@ -91,7 +91,7 @@ flowchart TD
 | `src/rule_providers.ts` | Rule Provider 定义（外部规则集引用） | `ruleProviders` |
 | `src/types.ts` | TypeScript 类型与接口定义 | `FeatureFlags`, `ProxyNode`, `ProxyGroup`, `ClashConfig`, `BaseLists`, `BuildBaseListsInput`, `BuildProxyGroupsInput` 等 |
 | `src/utils.ts` | 通用工具函数 | `buildList()`, `parseBool()`, `parseNumber()`, `isNotNull()` |
-| `scripts/yaml_generator/generator.ts` | 静态 YAML 覆写文件生成器 | 穷举参数组合，生成 `yamls/` 目录下的 192 个 YAML 配置文件 |
+| `scripts/yaml_generator/generator.ts` | 静态 YAML 覆写文件生成器 | 穷举参数组合，生成 `dist/yamls/` 下的 192 个 YAML 配置文件 |
 
 ---
 
@@ -156,7 +156,7 @@ flowchart TD
 
 本项目支持两种部署方式，分别适用于不同使用场景：
 
-### JS 动态覆写（convert.js）
+### JS 动态覆写（dist/convert.js）
 
 **主要模式。** 运行于 Substore 等订阅转换工具的脚本执行环境（如 Loon、Surge 的脚本功能）。脚本动态分析上游订阅传入的**真实代理节点列表**，根据节点名称中的地理位置关键字和属性字段（如 `dialer-proxy`）实时分类，并生成包含完整代理组、规则、DNS 及 TUN 配置的 Clash 配置。
 
@@ -166,9 +166,9 @@ flowchart TD
 - 代理组可直接枚举具体节点名称（`regex: false`），比正则过滤更精确
 - 支持完整的运行时参数覆盖（通过 URL hash 传参）
 
-### 静态 YAML 覆写（yamls/*.yaml）
+### 静态 YAML 覆写（dist/yamls/*.yaml）
 
-**备用模式。** 通过 `scripts/yaml_generator/generator.ts` 预先生成的 YAML 配置文件，存放在 `yamls/` 目录下。这些文件使用 `scripts/yaml_generator/fake_proxies.json` 中的模拟节点数据穷举所有参数组合生成，供无法运行 JS 脚本的客户端直接引用。
+**备用模式。** 通过 `scripts/yaml_generator/generator.ts` 预先生成的 YAML 配置文件，存放在 `dist/yamls/` 下。这些文件使用 `scripts/yaml_generator/fake_proxies.json` 中的模拟节点数据穷举所有参数组合生成，供无法运行 JS 脚本的客户端直接引用。
 
 YAML 模式的特点：
 

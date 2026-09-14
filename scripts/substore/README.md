@@ -11,7 +11,7 @@
 ## 源码与构建产物
 
 - 项目源码：`scripts/substore/rename.ts`
-- 本地构建产物：`rename.js`、`rename.min.js`
+- 本地构建产物：`dist/rename.js`、`dist/rename.min.js`
 - 发布位置：`dist` 分支根目录
 
 执行以下命令可同时构建 Mihomo 覆写脚本和节点重命名脚本：
@@ -20,7 +20,7 @@
 npm run build
 ```
 
-不要直接修改生成的 `rename.js` 或 `rename.min.js`；功能调整应在 `rename.ts` 中进行。
+不要直接修改生成的 `dist/rename.js` 或 `dist/rename.min.js`；功能调整应在 `rename.ts` 中进行。
 
 ## 使用
 
