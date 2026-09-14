@@ -8,6 +8,7 @@
   "scripts": {
     "typecheck": "tsgo --noEmit",
     "test": "tsx --test scripts/tests/*.test.ts",
+    "preview": "tsx scripts/preview/server.ts",
     "build": "npm run typecheck && node scripts/build.mjs",
     "generate": "tsx scripts/yaml_generator/generator.ts",
     "artifacts": "npm run build && npm run generate",

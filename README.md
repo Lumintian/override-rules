@@ -278,6 +278,28 @@ https://cdn.jsdelivr.net/gh/Lumintian/override-rules@vX.Y.Z/yamls/config_gt-0_ip
 
 ## 开发
 
+### 本地快速预览
+
+```bash
+npm run preview
+```
+
+打开 **http://127.0.0.1:8787**，粘贴逐行节点名称，或导入返回名称文本 / Clash YAML / JSON 的公网链接。页面直接执行当前改名和覆写源码，提供名称对照、策略组卡片、模拟手动选择及配置查看；源码保存后自动更新，无须先构建产物。
+
+工具只监听回环地址，不新增第三方依赖，不保存订阅，不执行真实测速。也可以在远端运行，通过 SSH 隧道访问：
+
+```bash
+# 远端：运行 npm run preview
+# 本机：将本地 8788 转发到远端预览服务的 8787
+ssh -N -L 127.0.0.1:8788:127.0.0.1:8787 user@server
+```
+
+然后在本机打开 **http://127.0.0.1:8788**。链接下载与 DNS 解析由运行预览服务的机器完成。
+
+输入限制、隐私边界及使用方法见 [本地开发预览](docs/PREVIEW.md)。
+
+### 源码与命令
+
 源码位于 `src/`：
 
 ```text
@@ -302,6 +324,8 @@ src/
 npm install
 npm run typecheck
 npm run lint
+npm test
+npm run preview
 npm run build
 npm run artifacts
 ```
