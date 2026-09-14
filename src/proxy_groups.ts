@@ -137,6 +137,12 @@ export function buildProxyGroups({
             type: "select",
             proxies: allNodes,
         },
+        {
+            name: PROXY_GROUPS.MATCH,
+            icon: `${CDN_URL}/gh/Koolson/Qure@master/IconSet/Color/Final.png`,
+            type: "select",
+            proxies: [PROXY_GROUPS.SELECT, "DIRECT"],
+        },
         landing
             ? {
                   name: PROXY_GROUPS.FRONT_PROXY,
@@ -279,12 +285,6 @@ export function buildProxyGroups({
             icon: `${CDN_URL}/gh/Koolson/Qure@master/IconSet/Color/AdBlack.png`,
             type: "select",
             proxies: ["REJECT", "REJECT-DROP", "DIRECT"],
-        },
-        {
-            name: PROXY_GROUPS.FINAL,
-            icon: `${CDN_URL}/gh/Koolson/Qure@master/IconSet/Color/Final.png`,
-            type: "select",
-            proxies: [PROXY_GROUPS.SELECT, "DIRECT"],
         },
         ...countryGroups,
     ];

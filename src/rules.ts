@@ -49,6 +49,6 @@ export function buildRules(
         `RULE-SET,Crypto,${PROXY_GROUPS.CRYPTO}`,
         `RULE-SET,GFWList,${PROXY_GROUPS.SELECT}`,
         `GEOIP,cn,DIRECT`,
-        `MATCH,${PROXY_GROUPS.FINAL}`,
+        `MATCH,${PROXY_GROUPS.MATCH}`,
     ].filter(isNotNull);
 }

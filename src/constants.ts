@@ -30,7 +30,7 @@ export const PROXY_GROUPS = {
     PIKPAK: "PikPak网盘",
     AD_BLOCK: "广告拦截",
     GLOBAL: "GLOBAL",
-    FINAL: "Final",
+    MATCH: "漏网之鱼",
 } as const;
 
 /**
