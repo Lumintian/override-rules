@@ -125,7 +125,7 @@ function ensureDir(dirPath: string): void {
     }
 }
 
-function cleanupLegacyYamlFiles(): void {
+function cleanupStaleYamlFiles(): void {
     const flagPatterns = FLAGS.map((flag) => `${getShortName(flag)}-\\d`);
     const currentPattern = new RegExp(`^config_gt-\\d_${flagPatterns.join("_")}\\.yaml$`);
 
@@ -163,7 +163,7 @@ export function main(): void {
 
     const baseConfig = loadFakeConfig();
     ensureDir(OUTPUT_DIR);
-    cleanupLegacyYamlFiles();
+    cleanupStaleYamlFiles();
 
     const combos = generateArgCombos();
     const limit = resolveLimit(combos.length);

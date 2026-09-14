@@ -3,8 +3,7 @@ powerfullz 的 Substore 订阅转换脚本
 https://github.com/powerfullz/override-rules
 
 支持的传入参数：
-- grouptype: 地区代理组类型（0=select 手动选择, 1=url-test 自动测速, 2=load-balance 负载均衡，默认 0）
-  - 向后兼容：若未传 grouptype 但传了 loadbalance，则 loadbalance=true 映射为 grouptype=2，loadbalance=false 映射为 grouptype=1
+- grouptype: 地区代理组类型（0=select 手动选择, 1=url-test 自动测速, 2=load-balance 负载均衡，默认 1）
 - landing: auto-detected from nodes with `dialer-proxy` field; no user parameter needed
 - ipv6: 启用 IPv6 支持（默认 false）
 - tun: 启用 TUN 模式（默认 false）
@@ -12,7 +11,7 @@ https://github.com/powerfullz/override-rules
 - keepalive: 启用 tcp-keep-alive（默认 false）
 - fakeip: DNS 使用 FakeIP 模式（默认 true；传 false 时为 RedirHost）
 - quic: 允许 QUIC 流量（UDP 443，默认 false）
-- threshold: 地区节点数量小于该值时不显示分组 (默认 0)
+- threshold: 地区节点数量小于该值时不显示分组 (默认 2)
 - regex: 使用正则过滤模式（include-all + filter）写入各地区代理组，而非直接枚举节点名称（默认 false）
 
 源码已迁移至 `src/*.ts`。

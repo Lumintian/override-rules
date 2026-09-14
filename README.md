@@ -51,8 +51,6 @@ https://cdn.jsdelivr.net/gh/Lumintian/override-rules/convert.min.js#grouptype=1&
 | `tun` | 启用 TUN 模式 | `false` |
 | `threshold` | 某地区节点数量低于该值时不生成对应地区组 | `2` |
 
-旧的 `loadbalance` 参数仍用于向后兼容。
-
 布尔参数支持 `true / false` 或 `1 / 0`。
 
 ### 示例

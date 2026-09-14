@@ -1,6 +1,5 @@
 export interface ScriptArgs {
     grouptype?: string;
-    loadbalance?: string;
     ipv6?: string;
     full?: string;
     keepalive?: string;
