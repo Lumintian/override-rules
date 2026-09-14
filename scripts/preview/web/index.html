@@ -5,38 +5,49 @@
         <meta name="viewport" content="width=device-width, initial-scale=1" />
         <meta name="preview-token" content="__PREVIEW_TOKEN__" />
         <title>Override Lab · 本地开发预览</title>
+        <link rel="icon" href="/favicon.svg" type="image/svg+xml" />
         <link rel="stylesheet" href="/app.css" />
         <script src="/app.js" defer></script>
     </head>
     <body>
         <header class="app-header">
-            <a class="brand" href="/" aria-label="Override Lab 首页"
-                ><span class="brand-mark">O<span>›</span></span
-                ><span>Override <strong>Lab</strong><small>覆写规则 · 本地开发预览</small></span></a
-            >
+            <a class="brand" href="/" aria-label="Override Lab 首页">
+                <span class="brand-mark" aria-hidden="true">
+                    <svg viewBox="0 0 5 5" shape-rendering="crispEdges">
+                        <rect width="5" height="5" class="identicon-bg" />
+                        <rect x="1" y="0" width="3" height="1" />
+                        <rect x="0" y="1" width="1" height="3" />
+                        <rect x="4" y="1" width="1" height="3" />
+                        <rect x="1" y="4" width="3" height="1" />
+                    </svg>
+                </span>
+                <span class="brand-copy">
+                    Override <strong>Lab</strong>
+                    <small>PIXEL · OVERRIDE PREVIEW</small>
+                </span>
+            </a>
             <div class="header-right">
-                <span class="local-badge">不上传第三方</span
-                ><span id="connection" class="connection" role="status">正在连接源码…</span>
+                <span class="local-badge">127.0.0.1</span>
+                <span id="connection" class="connection" role="status">正在连接源码…</span>
             </div>
         </header>
         <div class="workspace">
-            <aside class="input-panel" aria-label="预览输入与参数">
+            <aside id="input-panel" class="input-panel" aria-label="预览输入与参数">
                 <div class="section-title">
-                    <span class="eyebrow">WORKSPACE</span
-                    ><button id="load-sample" class="text-button" type="button">载入示例 ↗</button>
+                    <span class="eyebrow">WORKSPACE</span>
+                    <button id="load-sample" class="text-button" type="button">载入示例</button>
                 </div>
                 <h1>从节点到策略组</h1>
-                <p class="muted intro">使用当前源码，查看改名和覆写后的真实配置结构。</p>
                 <div class="input-heading">
-                    <label for="input-kind">节点来源</label
-                    ><select id="input-kind">
+                    <label for="input-kind">节点来源</label>
+                    <select id="input-kind">
                         <option value="text">粘贴文本</option>
                         <option value="url">链接导入</option>
                     </select>
                 </div>
                 <div id="text-source">
-                    <label class="sr-only" for="node-input">节点名称或 Clash 配置</label
-                    ><textarea
+                    <label class="sr-only" for="node-input">节点名称或 Clash 配置</label>
+                    <textarea
                         id="node-input"
                         rows="10"
                         spellcheck="false"
@@ -44,60 +55,80 @@
                     ></textarea>
                 </div>
                 <div id="url-source" hidden>
-                    <label class="sr-only" for="source-url">HTTP(S) 原始链接</label
-                    ><input
+                    <label class="sr-only" for="source-url">HTTP(S) 原始链接</label>
+                    <input
                         id="source-url"
                         type="url"
                         autocomplete="off"
                         placeholder="https://example.com/nodes.txt"
                     />
-                    <p class="hint">
-                        支持公网文本 / Clash YAML / JSON。点击预览时读取一次，源码变化不会重复下载。
-                    </p>
+                    <p class="hint">点击预览时读取一次；源码变化不会重复下载。</p>
                 </div>
                 <div class="input-tools">
-                    <label for="input-format">内容格式</label
-                    ><select id="input-format">
+                    <label for="input-format">内容格式</label>
+                    <select id="input-format">
                         <option value="auto">自动识别</option>
                         <option value="names">逐行名称</option>
-                        <option value="clash">Clash YAML / JSON</option></select
-                    ><button id="clear-input" class="text-button" type="button">清空</button>
+                        <option value="clash">Clash YAML / JSON</option>
+                    </select>
+                    <button id="clear-input" class="text-button" type="button">清空</button>
                 </div>
                 <p id="import-status" class="hint" aria-live="polite"></p>
                 <div class="pipeline-step">
                     <span class="step-number">01</span>
-                    <h2>节点改名</h2>
-                    <label class="toggle"
-                        ><input id="enable-rename" type="checkbox" checked /><span
-                            >启用</span
-                        ></label
-                    >
+                    <h2>
+                        节点改名
+                        <button
+                            id="rename-help"
+                            class="help-trigger"
+                            type="button"
+                            aria-expanded="false"
+                            aria-controls="rename-help-panel"
+                            title="查看改名参数"
+                            aria-label="查看改名参数"
+                        >
+                            ?
+                        </button>
+                    </h2>
+                    <label class="toggle">
+                        <input id="enable-rename" type="checkbox" checked />
+                        <span>启用</span>
+                    </label>
                 </div>
-                <label class="sr-only" for="rename-args">改名参数</label
-                ><textarea id="rename-args" class="args-input" rows="2" spellcheck="false">
+                <div id="rename-help-panel" class="help-panel" hidden></div>
+                <label class="sr-only" for="rename-args">改名参数</label>
+                <textarea id="rename-args" class="args-input" rows="2" spellcheck="false">
 flag&amp;blgd&amp;bl&amp;nm&amp;clear</textarea>
-                <p class="hint">当前示例含 clear：过滤流量 / 到期提示。关闭“启用”可只预览覆写。</p>
                 <div class="pipeline-step">
                     <span class="step-number">02</span>
-                    <h2>配置覆写</h2>
-                    <button id="extra-preset" class="text-button" type="button">试试额外组</button>
+                    <h2>
+                        配置覆写
+                        <button
+                            id="override-help"
+                            class="help-trigger"
+                            type="button"
+                            aria-expanded="false"
+                            aria-controls="override-help-panel"
+                            title="查看覆写参数"
+                            aria-label="查看覆写参数"
+                        >
+                            ?
+                        </button>
+                    </h2>
                 </div>
-                <label class="sr-only" for="override-args">覆写参数</label
-                ><textarea id="override-args" class="args-input" rows="2" spellcheck="false">
+                <div id="override-help-panel" class="help-panel" hidden></div>
+                <label class="sr-only" for="override-args">覆写参数</label>
+                <textarea id="override-args" class="args-input" rows="2" spellcheck="false">
 grouptype=1&amp;threshold=2</textarea>
-                <p class="hint">例如 us=2&amp;sg=1；参数与正式脚本一致。</p>
                 <div class="run-controls">
                     <button id="run-preview" class="primary-button" type="button">
-                        <span>↻</span> 更新预览</button
-                    ><label class="toggle"
-                        ><input id="auto-preview" type="checkbox" checked /><span
-                            >自动更新</span
-                        ></label
-                    >
+                        <span>↻</span> 更新预览
+                    </button>
+                    <label class="toggle">
+                        <input id="auto-preview" type="checkbox" checked />
+                        <span>自动更新</span>
+                    </label>
                 </div>
-                <p class="privacy-note">
-                    输入仅在浏览器与预览服务内存中处理。不保存订阅，不上传第三方，也不连接节点测速。
-                </p>
             </aside>
             <main class="preview-panel">
                 <div class="preview-heading">
@@ -128,8 +159,10 @@ grouptype=1&amp;threshold=2</textarea>
                             aria-selected="true"
                             data-view="groups"
                         >
-                            策略组</button
-                        ><button
+                            <span class="tab-icon" aria-hidden="true">G</span>
+                            策略组
+                        </button>
+                        <button
                             id="tab-names"
                             type="button"
                             role="tab"
@@ -138,8 +171,10 @@ grouptype=1&amp;threshold=2</textarea>
                             data-view="names"
                             tabindex="-1"
                         >
-                            名称对照</button
-                        ><button
+                            <span class="tab-icon" aria-hidden="true">N</span>
+                            名称对照
+                        </button>
+                        <button
                             id="tab-config"
                             type="button"
                             role="tab"
@@ -148,28 +183,28 @@ grouptype=1&amp;threshold=2</textarea>
                             data-view="config"
                             tabindex="-1"
                         >
+                            <span class="tab-icon" aria-hidden="true">C</span>
                             生成配置
                         </button>
                     </div>
-                    <label class="search-box"
-                        ><span aria-hidden="true">⌕</span
-                        ><input
+                    <label class="search-box">
+                        <span aria-hidden="true">⌕</span>
+                        <input
                             id="search"
                             type="search"
                             placeholder="搜索策略组或节点"
                             aria-label="搜索策略组或节点"
-                    /></label>
+                        />
+                    </label>
                 </div>
                 <div id="empty-state" class="empty-state">
                     <span class="empty-symbol">⌘</span>
                     <h3>你的配置，在这里展开</h3>
                     <p>粘贴节点名称，或载入示例开始预览。</p>
-                    <p class="hint">无需启动 Mihomo，也不会消耗代理流量。</p>
                 </div>
                 <section id="panel-groups" role="tabpanel" aria-labelledby="tab-groups">
                     <p id="simulation-note" class="panel-note" hidden>
-                        点击 select
-                        组成员可模拟选择，不修改生成配置。自动策略仅展示候选节点，不伪造延迟或选中结果。
+                        点击 select 组成员可模拟选择，不修改生成配置。自动策略仅展示候选节点。
                     </p>
                     <div id="group-grid" class="group-grid"></div>
                     <p id="group-empty" class="no-matches" hidden>没有匹配的策略组或节点。</p>
@@ -195,31 +230,30 @@ grouptype=1&amp;threshold=2</textarea>
                 </section>
                 <section id="panel-config" role="tabpanel" aria-labelledby="tab-config" hidden>
                     <div class="config-toolbar">
-                        <label for="config-format"
-                            >格式
+                        <label for="config-format">
+                            格式
                             <select id="config-format">
                                 <option value="yaml">YAML</option>
                                 <option value="json">JSON</option>
-                            </select></label
-                        >
+                            </select>
+                        </label>
                         <div>
                             <button id="copy-config" class="secondary-button" type="button">
-                                复制配置</button
-                            ><button id="download-config" class="secondary-button" type="button">
+                                复制配置
+                            </button>
+                            <button id="download-config" class="secondary-button" type="button">
                                 下载
                             </button>
                         </div>
                     </div>
-                    <p class="panel-note">
-                        配置可能包含订阅凭据，请勿随意分享。名称模式的节点没有连接信息，不能作为可用订阅。
-                    </p>
                     <pre id="config-output" tabindex="0" aria-label="生成配置文本"></pre>
                 </section>
                 <footer class="preview-footer">
-                    <span
-                        >rename.ts <span class="arrow">→</span> main.ts
-                        <span class="arrow">→</span> 当前配置</span
-                    ><span id="result-status" role="status">未运行</span>
+                    <span>
+                        rename.ts <span class="arrow">→</span> main.ts
+                        <span class="arrow">→</span> 当前配置
+                    </span>
+                    <span id="result-status" role="status">未运行</span>
                 </footer>
             </main>
         </div>

@@ -28,6 +28,8 @@ const renameEnabled = element<HTMLInputElement>("enable-rename");
 const autoPreview = element<HTMLInputElement>("auto-preview");
 const search = element<HTMLInputElement>("search");
 const runButton = element<HTMLButtonElement>("run-preview");
+renameArgs.value = renameArgs.value.trim();
+overrideArgs.value = overrideArgs.value.trim();
 const tabs = [...document.querySelectorAll<HTMLButtonElement>("[data-view]")];
 let result: PreviewResult | undefined;
 let view = "groups";
@@ -40,23 +42,214 @@ const selected = new Map<string, string>();
 const expanded = new Map<string, boolean>();
 let groupMap = new Map<string, ProxyGroup>();
 
-const sample = `剩余流量：示例流量
-套餐到期：示例日期
-🇭🇰 𝐇𝐊 · Plus〔4837/CMI/163 2x〕
-🇭🇰 𝐇𝐊 · BGP〔4837/CMI/163 2x〕
-🇭🇰 𝐇𝐊 · HKT 禁直连
-🇲🇴 𝐌𝐎 · One〔4837/CMI/163 2x〕
-🇹🇼 𝐓𝐖 · BGP〔4837/CMI/163 2x〕
-🇹🇼 𝐓𝐖 · Hinat 禁直连
-🇯🇵 𝐉𝐏 · Spark〔SoftBank 0.5x〕
-🇯🇵 𝐉𝐏 · B〔4837/CMI/163 2x〕
-🇰🇷 𝐊𝐑 · GMP〔4837/CMI/163 1x〕
-🇸🇬 𝐒𝐆 · Standard〔4837/CMIN2/163 2x〕
-🇸🇬 𝐒𝐆 · Evo〔4837/CMIN2/163 2x〕
-🇺🇸 𝐔𝐒 · LA〔4837 0.5x〕
-🇺🇸 𝐔𝐒 · SJC〔4837 0.5x〕
-🇺🇸 𝐔𝐒 · LosAngeles〔Standard 0.01x〕
-🇻🇳 𝐕𝐍 · TOT〔Standard 0.1x〕`;
+const renameParams: [string, string][] = [
+    ["in=zh/en/flag/quan", "指定原节点名的地区格式；不传时自动识别"],
+    ["out=zh/en/flag/quan", "指定输出地区格式；默认中文"],
+    ["flag", "在节点名称前添加国旗"],
+    ["blgd", "保留并规范常见倍率、IPLC、IEPL、家宽、游戏等标签"],
+    ["bl", "从原名称中提取并保留倍率"],
+    ["blkey=A+B>C", "保留指定关键词，也可将关键词替换为新名称"],
+    ["nm", "保留无法识别地区的节点；默认会移除这些节点"],
+    ["one", "单一节点地区不显示 01 序号"],
+    ["name=名称", "添加自定义名称前缀"],
+    ["nf", "将 name= 指定的前缀放在最前面"],
+    ["fgf=", "设置名称字段之间的分隔符；默认空格"],
+    ["sn=", "设置地区与序号之间的分隔符；默认空格"],
+    ["clear", "移除套餐、到期、流量等信息类节点"],
+    ["blpx", "按保留的倍率或线路标签进行分组排序"],
+    ["blockquic=on/off", "设置节点的 block-quic 字段"],
+];
+const overrideParams: [string, string][] = [
+    ["grouptype", "基础地区策略组类型：0=select、1=url-test、2=load-balance"],
+    ["ipv6", "启用 IPv6；默认 false"],
+    ["full", "生成完整 Mihomo 配置；默认 false"],
+    ["keepalive", "启用 TCP Keep Alive；默认 false"],
+    ["fakeip", "DNS 使用 Fake-IP；显式 false 时使用 RedirHost"],
+    ["quic", "允许 UDP 443 / QUIC 流量；默认 false"],
+    ["regex", "基础及额外地区组使用 include-all + filter；默认 false"],
+    ["tun", "启用 TUN 模式；默认 false"],
+    ["threshold", "某地区节点数量低于该值时不生成基础地区组；默认 2"],
+    ["hk/mo/tw/sg/jp/kr/us/…", "对应地区的额外手动选择组数量，整数 0–100"],
+];
+const sampleRegions: { flag: string; code: string; city: string }[] = [
+    { flag: "🇭🇰", code: "HK", city: "Kowloon" },
+    { flag: "🇲🇴", code: "MO", city: "Taipa" },
+    { flag: "🇹🇼", code: "TW", city: "Banqiao" },
+    { flag: "🇯🇵", code: "JP", city: "Osaka" },
+    { flag: "🇰🇷", code: "KR", city: "Busan" },
+    { flag: "🇸🇬", code: "SG", city: "Jurong" },
+    { flag: "🇺🇸", code: "US", city: "Denver" },
+    { flag: "🇬🇧", code: "UK", city: "Manchester" },
+    { flag: "🇩🇪", code: "DE", city: "Munich" },
+    { flag: "🇫🇷", code: "FR", city: "Lyon" },
+    { flag: "🇨🇦", code: "CA", city: "Calgary" },
+];
+const samplePlans = ["Lite", "Core", "Edge", "Relay", "Transit", "Lab"];
+const sampleCarriers = ["NTT", "PCCW", "HE", "GTT", "Cogent", "Telia"];
+const sampleRates = ["0.2x", "0.5x", "1x", "2x", "3x"];
+const unknownSamples = ["🇻🇳 VN · Mekong", "🇧🇷 BR · Santos", "🇳🇬 NG · Lagos"];
+
+function mulberry32(seed: number): () => number {
+    return () => {
+        seed |= 0;
+        seed = (seed + 0x6d2b79f5) | 0;
+        let t = Math.imul(seed ^ (seed >>> 15), 1 | seed);
+        t = (t + Math.imul(t ^ (t >>> 7), 61 | t)) ^ t;
+        return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
+    };
+}
+function pick<T>(random: () => number, items: T[]): T {
+    return items[Math.floor(random() * items.length)];
+}
+function generateSample(): string {
+    const random = mulberry32((Math.random() * 0xffffffff) >>> 0);
+    const pool = [...sampleRegions];
+    for (let i = pool.length - 1; i > 0; i--) {
+        const j = Math.floor(random() * (i + 1));
+        [pool[i], pool[j]] = [pool[j], pool[i]];
+    }
+    const chosen = pool.slice(0, 6 + Math.floor(random() * 3));
+    const lines = [
+        `剩余流量：Lab-${Math.floor(random() * 900 + 100)}GiB`,
+        `套餐到期：2099-0${1 + Math.floor(random() * 9)}-15`,
+    ];
+    for (const region of chosen) {
+        const copies = 1 + Math.floor(random() * 2);
+        for (let i = 0; i < copies; i++) {
+            const plan = pick(random, samplePlans);
+            const carrier = pick(random, sampleCarriers);
+            const rate = pick(random, sampleRates);
+            lines.push(
+                `${region.flag} ${region.code} · ${plan} ${region.city}〔${carrier} ${rate}〕`
+            );
+        }
+    }
+    lines.push(
+        pick(random, unknownSamples) +
+            `〔${pick(random, sampleCarriers)} ${pick(random, sampleRates)}〕`
+    );
+    return lines.join("\n");
+}
+function fillHelp(panel: HTMLElement, rows: [string, string][], note: string): void {
+    const table = create("table");
+    const head = create("thead");
+    const hr = create("tr");
+    hr.append(create("th", "", "参数"), create("th", "", "说明"));
+    head.append(hr);
+    const body = create("tbody");
+    for (const [name, detail] of rows) {
+        const tr = create("tr");
+        const code = create("td");
+        code.append(create("code", "", name));
+        tr.append(code, create("td", "", detail));
+        body.append(tr);
+    }
+    table.append(head, body);
+    panel.replaceChildren(table, create("p", "help-note", note));
+}
+function bindHelp(
+    triggerId: string,
+    panelId: string,
+    rows: [string, string][],
+    note: string
+): void {
+    const trigger = element<HTMLButtonElement>(triggerId);
+    const panel = element(panelId);
+    fillHelp(panel, rows, note);
+    panel.tabIndex = -1;
+    document.body.append(panel);
+    const hoverable = () => matchMedia("(hover: hover) and (pointer: fine)").matches;
+    let hideTimer: ReturnType<typeof setTimeout> | undefined;
+    const place = () => {
+        const rect = trigger.getBoundingClientRect();
+        const gap = 8;
+        const width = Math.min(360, Math.max(240, window.innerWidth - 24));
+        const left = Math.min(Math.max(12, rect.left), window.innerWidth - width - 12);
+        panel.style.width = `${width}px`;
+        panel.style.left = `${left}px`;
+        panel.style.top = `${rect.bottom + gap}px`;
+        panel.style.bottom = "auto";
+        panel.style.maxHeight = `${Math.max(160, window.innerHeight - rect.bottom - gap - 12)}px`;
+    };
+    const setOpen = (open: boolean) => {
+        clearTimeout(hideTimer);
+        hideTimer = undefined;
+        if (open) {
+            for (const other of document.querySelectorAll<HTMLElement>(".help-panel")) {
+                if (other !== panel) other.hidden = true;
+            }
+            for (const button of document.querySelectorAll<HTMLButtonElement>(".help-trigger")) {
+                if (button !== trigger) button.setAttribute("aria-expanded", "false");
+            }
+        }
+        trigger.setAttribute("aria-expanded", String(open));
+        if (open) {
+            panel.style.visibility = "hidden";
+            panel.hidden = false;
+            place();
+            panel.style.visibility = "";
+        } else {
+            panel.hidden = true;
+        }
+    };
+    const scheduleClose = () => {
+        if (!hoverable()) return;
+        clearTimeout(hideTimer);
+        hideTimer = setTimeout(() => setOpen(false), 180);
+    };
+    trigger.addEventListener("click", (event) => {
+        event.stopPropagation();
+        if (hoverable() && !panel.hidden) return;
+        setOpen(Boolean(panel.hidden));
+    });
+    trigger.addEventListener("pointerenter", () => {
+        if (hoverable()) setOpen(true);
+    });
+    trigger.addEventListener("pointerleave", scheduleClose);
+    panel.addEventListener("pointerenter", () => {
+        if (hoverable()) setOpen(true);
+    });
+    panel.addEventListener("pointerleave", scheduleClose);
+    trigger.addEventListener("focus", () => setOpen(true));
+    trigger.addEventListener("blur", (event) => {
+        const next = event.relatedTarget;
+        if (next instanceof Node && (panel.contains(next) || trigger.contains(next))) return;
+        setOpen(false);
+    });
+    panel.addEventListener("blur", (event) => {
+        const next = event.relatedTarget;
+        if (next instanceof Node && (panel.contains(next) || trigger.contains(next))) return;
+        setOpen(false);
+    });
+    trigger.addEventListener("keydown", (event) => {
+        if (event.key === "Escape") {
+            setOpen(false);
+            trigger.blur();
+        }
+        if (event.key === "Tab" && !event.shiftKey && !panel.hidden) {
+            event.preventDefault();
+            panel.focus();
+        }
+    });
+    panel.addEventListener("keydown", (event) => {
+        if (event.key === "Escape") {
+            event.preventDefault();
+            setOpen(false);
+            trigger.focus();
+        }
+    });
+    document.addEventListener("click", (event) => {
+        const target = event.target;
+        if (!(target instanceof Node)) return;
+        if (!panel.contains(target) && !trigger.contains(target)) setOpen(false);
+    });
+    const onViewportChange = () => {
+        if (!panel.hidden) place();
+    };
+    window.addEventListener("resize", onViewportChange);
+    window.addEventListener("scroll", onViewportChange, { passive: true });
+    element("input-panel").addEventListener("scroll", onViewportChange, { passive: true });
+}
 
 async function api<T>(route: string, body?: unknown, signal?: AbortSignal): Promise<T> {
     const response = await fetch(route, {
@@ -360,18 +553,26 @@ inputKind.addEventListener("change", () => {
     changed();
 });
 runButton.addEventListener("click", () => void runPreview(true));
+bindHelp(
+    "rename-help",
+    "rename-help-panel",
+    renameParams,
+    "与 rename.min.js 的 Fragment 参数一致。关闭“启用”可只预览覆写。"
+);
+bindHelp(
+    "override-help",
+    "override-help-panel",
+    overrideParams,
+    "布尔值可用 true/false 或 1/0。地区代码如 us=2、sg=1 生成额外手动组。"
+);
 element("load-sample").addEventListener("click", () => {
-    input.value = sample;
+    input.value = generateSample();
     inputKind.value = "text";
     inputFormat.value = "auto";
     element("text-source").hidden = false;
     element("url-source").hidden = true;
-    element("import-status").textContent = "";
+    element("import-status").textContent = "已载入随机示例，不含真实订阅节点。";
     void runPreview();
-});
-element("extra-preset").addEventListener("click", () => {
-    overrideArgs.value = "grouptype=1&threshold=2&us=2&sg=1";
-    changed();
 });
 element("clear-input").addEventListener("click", () => {
     request?.abort();

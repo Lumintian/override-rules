@@ -114,8 +114,16 @@ export function createPreviewServer(
                 if (!data || typeof data.url !== "string") throw new Error("请提供链接。");
                 const content = await (options.importer ?? importContent)(data.url);
                 send(response, 200, "application/json", JSON.stringify({ content }));
-            } else if (request.method === "GET" && route === "/favicon.ico") {
-                response.writeHead(204).end();
+            } else if (
+                request.method === "GET" &&
+                (route === "/favicon.svg" || route === "/favicon.ico")
+            ) {
+                send(
+                    response,
+                    200,
+                    "image/svg+xml",
+                    readFileSync(path.join(assets, "favicon.svg"), "utf8")
+                );
             } else {
                 send(response, 404, "text/plain", "Not found");
             }
