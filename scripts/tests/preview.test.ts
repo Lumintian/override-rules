@@ -131,7 +131,11 @@ test("preview runs the real rename and override sources, with row-level removals
     assert.match(result.changes[4].after!, /美国/);
     assert.equal(getGroup(result.config, "美国额外1").type, "select");
     assert.equal(getGroup(result.config, "美国额外2").type, "select");
-    assert.ok(result.warnings.some((warning) => warning.includes("未识别")));
+    assert.ok(
+        result.warnings.some(
+            (warning) => warning.includes("未识别") && warning.includes("越南 0.1× 01")
+        )
+    );
     assert.deepEqual(result.config, convert({ proxies: result.config.proxies }, { us: "2" }));
     assert.ok(result.yaml.includes("proxy-groups:"));
     assert.ok(

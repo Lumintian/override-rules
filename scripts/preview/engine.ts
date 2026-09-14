@@ -178,7 +178,7 @@ export class PreviewEngine {
             warnings.push("改名后没有保留节点，请检查改名过滤参数；下方仍显示被移除的原始名称。");
         if (namesOnly)
             warnings.push(
-                "名称模式只预览命名与分组，不包含协议凭据，也无法判断链式代理或 Tailscale 属性。生成配置不能作为可连接的订阅使用。"
+                "名称模式只预览命名与分组，不包含协议凭据，也无法判断链式代理或 Tailscale 属性。"
             );
         if ("proxy-providers" in input)
             warnings.push("只处理输入配置的 proxies 数组，不下载或展开 proxy-providers。");
@@ -202,9 +202,14 @@ export class PreviewEngine {
                 !byName.has(node.name) &&
                 node["dialer-proxy"] !== "前置代理" &&
                 node.type !== "tailscale"
-        ).length;
-        if (unknown)
-            warnings.push(`${unknown} 个节点未识别到覆写脚本支持的地区，仍保留在手动选择中。`);
+        );
+        if (unknown.length) {
+            const shown = unknown.slice(0, 8).map((node) => node.name);
+            const extra = unknown.length > shown.length ? ` 等共 ${unknown.length} 个` : "";
+            warnings.push(
+                `${unknown.length} 个节点未识别到覆写脚本支持的地区，仍保留在手动选择中：${shown.join("、")}${extra}`
+            );
+        }
         const duplicates = duplicateNames(nodes);
         if (duplicates.length)
             warnings.push(
