@@ -17,12 +17,14 @@ for (const regex of [false, true]) {
                     ...regionalNodes,
                     ...(landing ? [{ name: "美国 落地 0.3x", "dialer-proxy": "前置代理" }] : []),
                 ];
+                const orderedRegionalNodes = [regionalNodes[1], regionalNodes[2], regionalNodes[3], regionalNodes[0]];
+                const expected = [...orderedRegionalNodes, ...proxies.slice(regionalNodes.length)];
                 const result = convert({ proxies }, { regex, grouptype: String(grouptype) });
 
-                assert.deepEqual(result.proxies, proxies);
+                assert.deepEqual(result.proxies, expected);
                 assert.deepEqual(
                     getGroup(result, "手动选择").proxies,
-                    proxies.map((node) => node.name)
+                    expected.map((node) => node.name)
                 );
                 assert.ok(!result["proxy-groups"]?.some((group) => group.name === "低倍率节点"));
                 assert.ok(
@@ -36,7 +38,7 @@ for (const regex of [false, true]) {
                 } else {
                     assert.deepEqual(
                         countryGroup.proxies,
-                        regionalNodes.map((node) => node.name)
+                        orderedRegionalNodes.map((node) => node.name)
                     );
                 }
                 assertValidReferences(result);

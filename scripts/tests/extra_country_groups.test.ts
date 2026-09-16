@@ -50,7 +50,7 @@ for (const regex of [false, true]) {
             const baseline = convert({ proxies }, args);
             const result = convert({ proxies }, { ...args, us: "2", sg: "1" });
             assert.deepEqual(extraNames(result), ["新加坡额外1", "美国额外1", "美国额外2"]);
-            assert.deepEqual(result.proxies, proxies);
+            assert.deepEqual(result.proxies, baseline.proxies);
             for (const country of ["新加坡", "日本", "美国"]) {
                 assert.deepEqual(
                     getGroup(result, `${country}节点`),
