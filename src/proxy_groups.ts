@@ -138,6 +138,12 @@ export function buildProxyGroups({
             proxies: allNodes,
         },
         {
+            name: PROXY_GROUPS.STABLE,
+            icon: `${CDN_URL}/gh/Koolson/Qure@master/IconSet/Color/Available.png`,
+            type: "select",
+            proxies: [PROXY_GROUPS.SELECT, ...defaultSelector],
+        },
+        {
             name: PROXY_GROUPS.MATCH,
             icon: `${CDN_URL}/gh/Koolson/Qure@master/IconSet/Color/Final.png`,
             type: "select",

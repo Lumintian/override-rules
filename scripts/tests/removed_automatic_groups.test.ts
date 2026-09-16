@@ -53,11 +53,32 @@ for (const regex of [false, true]) {
                     }
                     const groupNames = result["proxy-groups"]!.map((group) => group.name);
                     assert.equal(
-                        groupNames.indexOf("漏网之鱼"),
+                        groupNames.indexOf("稳定代理"),
                         groupNames.indexOf("手动选择") + 1
                     );
+                    assert.equal(
+                        groupNames.indexOf("漏网之鱼"),
+                        groupNames.indexOf("稳定代理") + 1
+                    );
                     assert.ok(result.rules?.includes("MATCH,漏网之鱼"));
-                    assert.deepEqual(getGroup(result, "漏网之鱼").proxies, ["选择代理", "DIRECT"]);
+                    assert.deepEqual(getGroup(result, "稳定代理").proxies, [
+                        "选择代理",
+                        ...(landing ? ["落地节点"] : []),
+                        "香港节点",
+                        "美国节点",
+                        ...(extra ? ["美国额外1", "美国额外2"] : []),
+                        "手动选择",
+                        "DIRECT",
+                    ]);
+                    assert.deepEqual(getGroup(result, "漏网之鱼").proxies, [
+                        "选择代理",
+                        ...(landing ? ["落地节点"] : []),
+                        "香港节点",
+                        "美国节点",
+                        ...(extra ? ["美国额外1", "美国额外2"] : []),
+                        "手动选择",
+                        "DIRECT",
+                    ]);
                     assertValidReferences(result);
                 });
             }
@@ -69,7 +90,10 @@ for (const regex of [false, true]) {
         assert.deepEqual(getGroup(result, "选择代理").proxies, ["手动选择", "DIRECT"]);
         assert.deepEqual(getGroup(result, "手动选择").proxies, ["未知节点"]);
         const groupNames = result["proxy-groups"]!.map((group) => group.name);
-        assert.equal(groupNames.indexOf("漏网之鱼"), groupNames.indexOf("手动选择") + 1);
+        assert.equal(groupNames.indexOf("稳定代理"), groupNames.indexOf("手动选择") + 1);
+        assert.equal(groupNames.indexOf("漏网之鱼"), groupNames.indexOf("稳定代理") + 1);
+        assert.deepEqual(getGroup(result, "稳定代理").proxies, ["选择代理", "手动选择", "DIRECT"]);
+        assert.deepEqual(getGroup(result, "漏网之鱼").proxies, ["选择代理", "手动选择", "DIRECT"]);
         assert.ok(result.rules?.includes("MATCH,漏网之鱼"));
         assertValidReferences(result);
     });

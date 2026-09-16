@@ -7,6 +7,7 @@ export const SPEEDTEST_URL = "https://cp.cloudflare.com";
 export const PROXY_GROUPS = {
     SELECT: "选择代理",
     MANUAL: "手动选择",
+    STABLE: "稳定代理",
     LANDING: "落地节点",
     FRONT_PROXY: "前置代理",
     STATIC_RESOURCES: "静态资源",
