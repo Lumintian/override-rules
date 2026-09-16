@@ -1,73 +1,92 @@
-# Sub-Store 节点重命名脚本
+# Sub-Store 节点预处理
 
-该目录包含本项目维护的 **Sub-Store 节点预处理组件**。它以 FengNinger 的重命名脚本为初始基础，并将根据本项目的地区识别、倍率、家宽、自建和落地节点约定独立演进。
+本目录维护与 Mihomo 覆写配套的两个节点操作：`rename` 负责规范化、排序和编号；`sort` 负责在多个来源合并后只排序。两个入口与 `convert` 共享 [`shared/preferences.ts`](../../shared/preferences.ts) 的地区、来源前缀和类别偏好。
 
-```text
-原始订阅 → rename.min.js → 规范化节点名称 → convert.min.js → Mihomo 配置
-```
+完整的算法约定、可配置权重与边界见 [节点排序与命名约定](../../docs/NODE_ORDERING.md)。
 
-重命名脚本与 Mihomo 覆写脚本是两个独立执行阶段，但在同一项目中维护并使用相同版本发布，避免命名输出与策略组识别规则逐渐失配。
+## 源码与构建
 
-## 源码与构建产物
-
-- 项目源码：`scripts/substore/rename.ts`
-- 本地构建产物：`dist/rename.js`、`dist/rename.min.js`
-- 发布位置：`dist` 分支根目录
-
-执行以下命令可同时构建 Mihomo 覆写脚本和节点重命名脚本：
+| 操作 | 源码 | 构建产物 |
+| --- | --- | --- |
+| 重命名 | `scripts/substore/rename.ts` | `dist/rename.js`、`dist/rename.min.js` |
+| 合并后排序 | `scripts/substore/sort.ts` | `dist/sort.js`、`dist/sort.min.js` |
+| 配置覆写 | `src/main.ts` | `dist/convert.js`、`dist/convert.min.js` |
 
 ```bash
 npm run build
 ```
 
-不要直接修改生成的 `dist/rename.js` 或 `dist/rename.min.js`；功能调整应在 `rename.ts` 中进行。
+不要直接修改构建产物。发布工作流会将产物写到 `dist` 分支；功能分支的源码提交不会自动更新已发布的 `@dist` 脚本。
 
-## 使用
+## 单一来源
 
-在 Sub-Store 的节点处理流程中添加“脚本操作”，使用发布后的压缩版本：
-
-```text
-https://cdn.jsdelivr.net/gh/Lumintian/override-rules@dist/rename.min.js
-```
-
-推荐从以下参数组合开始：
+在 Sub-Store 的节点处理流程中添加脚本操作，先重命名，后进行配置覆写：
 
 ```text
-https://cdn.jsdelivr.net/gh/Lumintian/override-rules@dist/rename.min.js#flag&blgd&bl&blkey=自建+落地&nm
+原始订阅 → rename.min.js → convert.min.js → Mihomo 配置
 ```
 
-该组合使用默认中文地区名，在名称前添加国旗，保留常见线路标签、倍率以及`自建`、`落地`标记，并保留无法识别地区的节点。
+发布版本的重命名脚本地址：
 
-常用参数：
+```text
+https://cdn.jsdelivr.net/gh/Lumintian/override-rules@dist/rename.min.js#flag&blgd&bl&nm&clear
+```
+
+这组参数保留倍率与常见线路标签，清除明确的信息节点，并将无法识别地区的节点保留在最后。排序默认执行，不再需要 `blpx`。
+
+## 多个来源
+
+各来源分别使用不同的 `name` 前缀，推荐包含明确的竖线分隔：
+
+```text
+rename.min.js#name=机场A%20%7C&flag&blgd&bl&nm&clear
+rename.min.js#name=机场B%20%7C&flag&blgd&bl&nm&clear
+```
+
+在合并订阅的节点操作末尾追加：
+
+```text
+https://cdn.jsdelivr.net/gh/Lumintian/override-rules@dist/sort.min.js
+```
+
+`sort` 只调整数组顺序，不重复编号、不删除节点、不改连接字段。合并后的集合可以继续交给 `convert`，或导出为 provider 的节点内容。不要用再次运行 `rename` 来代替合并后的纯排序。
+
+如果之前隐藏了倍率或线路标签，`sort` 无法在序列化后的名字中恢复这些信息；多来源排序推荐保留 `bl&blgd`。
+
+## 重命名参数
 
 | 参数 | 作用 |
 | --- | --- |
-| `in=zh/en/flag/quan` | 指定原节点名的地区格式；不传时自动识别 |
+| `in=zh/en/flag/quan` | 指定原节点名地区格式；不传时自动识别 |
 | `out=zh/en/flag/quan` | 指定输出地区格式；默认中文 |
-| `flag` | 在节点名称前添加国旗 |
-| `blgd` | 保留并规范常见倍率、`IPLC`、`IEPL`、家宽、游戏等标签；中文“家宽”会规范为 `Fam` |
-| `bl` | 从原名称中提取并保留倍率 |
-| `blkey=A+B>C` | 保留指定关键词，也可将关键词替换为新名称 |
-| `nm` | 保留无法识别地区的节点；默认会移除这些节点 |
-| `one` | 单一节点地区不显示 `01` 序号 |
-| `name=名称` | 添加自定义名称前缀 |
-| `nf` | 将 `name=` 指定的前缀放在最前面 |
-| `fgf=` | 设置名称字段之间的分隔符；默认空格 |
-| `sn=` | 设置地区与序号之间的分隔符；默认空格 |
-| `clear` | 移除套餐、到期、流量等信息类节点 |
-| `blpx` | 按保留的倍率或线路标签进行分组排序，需要配合保留参数 |
-| `blockquic=on/off` | 设置节点的 `block-quic` 字段 |
+| `flag` | 在名称前添加国旗；纯国旗输出不重复添加 |
+| `blgd` | 保留常见线路标签；家宽规范为 `Fam`，多个标签可以同时保留 |
+| `bl` | 保留数值倍率；1 与 1.0 都不显示倍率标签 |
+| `blkey=A+B>C` | 保留关键词，也可按规则替换；多个命中分别保留 |
+| `nx` | 仅保留倍率为 1 或未标倍率的节点 |
+| `blnx` | 仅保留明确倍率大于 1 的节点 |
+| `nm` | 保留无法识别地区的节点并置底；未开启则移除 |
+| `one` | 某个完整 baseName 只有一个节点时省略 01 |
+| `name=名称` | 添加来源前缀；多来源推荐 `name=机场A%20%7C` |
+| `nf` | 将 name 前缀放在国旗之前，不改变排序身份 |
+| `fgf=` | 名称字段分隔符，默认空格 |
+| `sn=` | baseName 与序号的分隔符，默认空格 |
+| `clear` | 清理套餐、到期、剩余流量、官网等明确的信息节点 |
+| `blpx` | 已无须传入；新排序始终执行，此参数不再控制排序 |
+| `blockquic=on/off` | 显式设置 block-quic；不传时保留原字段 |
 
-若使用 `in=flag`，不要在本脚本之前执行会移除或重复添加国旗的节点操作。
+地区 → 前缀 → 类别逐层成块，同层级保持源顺序。类别默认是普通 1 倍 / 未标倍率、特殊标签、高倍率、低倍率；低倍率只在当前地区的当前前缀内沉底。
+
+编号按完整 baseName 独立计数，例如 `香港 01`、`香港 02` 与 `香港 0.2× 01`。这是显示序号，不是永久节点标识。
 
 ## 上游基线与许可证
 
-本项目从以下版本开始独立维护：
+重命名实现及地区名称数据从以下版本开始独立维护：
 
 - 上游仓库：<https://github.com/FengNinger/substore_rename_rule>
 - 初始文件：<https://github.com/FengNinger/substore_rename_rule/blob/63f7a3c63374db789234ea0828bc89ea1640a3db/rename.js>
-- 初始提交：[`63f7a3c63374db789234ea0828bc89ea1640a3db`](https://github.com/FengNinger/substore_rename_rule/commit/63f7a3c63374db789234ea0828bc89ea1640a3db)
+- 初始提交：`63f7a3c63374db789234ea0828bc89ea1640a3db`
 - 上游作者及版权：Copyright © 2025 FengNinger
 - 许可证：MIT，完整文本见 [`LICENSE`](./LICENSE)
 
-上游仅作为来源与历史基线；本项目不会承诺持续原样同步，其实现、参数及输出约定可能独立变化。
+上游仅作为来源与历史基线；本项目不承诺持续原样同步，其实现、参数及输出约定可能独立变化。
