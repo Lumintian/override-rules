@@ -11,6 +11,7 @@
  */
 
 import { classifyNode, hasSpecialTag, numberNodes, orderNodes, readMultiplier } from "../../shared/node_order";
+import { rewriteDialerReferences } from "../../shared/node_references";
 import type { NodeOrderMeta } from "../../shared/node_order";
 import { FG, findRegion, regionNames, splitPrefix } from "../../shared/regions";
 import type { NameFormat } from "../../shared/regions";
@@ -88,10 +89,10 @@ const aliases: Record<string, RegExp> = {
 };
 
 const fixedTags: Array<[RegExp, string]> = [
-    [/\bIPLC\b/i, "IPLC"], [/\bIEPL\b/i, "IEPL"], [/核心/, "Kern"],
-    [/边缘/, "Edge"], [/高级/, "Pro"], [/标准/, "Std"], [/实验/, "Exp"],
-    [/商宽/, "Biz"], [/家宽/, "Fam"], [/游戏|\bgame\b/i, "Game"],
-    [/购物/, "Buy"], [/专线/, "Zx"], [/\bLB\b/, "LB"], [/cloudflare/i, "CF"],
+    [/\bIPLC\b/i, "IPLC"], [/\bIEPL\b/i, "IEPL"], [/核心|\bKern\b/i, "Kern"],
+    [/边缘|\bEdge\b/i, "Edge"], [/高级|\bPro\b/i, "Pro"], [/标准|\bStd\b/i, "Std"], [/实验|\bExp\b/i, "Exp"],
+    [/商宽|\bBiz\b/i, "Biz"], [/家宽|\bFam\b/i, "Fam"], [/游戏|\bgame\b/i, "Game"],
+    [/购物|\bBuy\b/i, "Buy"], [/专线|\bZx\b/i, "Zx"], [/\bLB\b/, "LB"], [/cloudflare|\bCF\b/i, "CF"],
     [/\budp\b/i, "UDP"], [/\bgpt\b/i, "GPT"], [/\budpn\b/i, "UDPN"],
     [/自建|\bself\b/i, "自建"], [/落地|\blanding\b/i, "落地"],
 ];
@@ -120,9 +121,11 @@ function customTags(name: string, expression: string): string[] {
 export function renameNodes(proxies: readonly RenameProxy[], args: RenameArgs = {}): RenameProxy[] {
     const separator = text(args.fgf, " ");
     const prefix = text(args.name);
-    const output = formats[text(args.out)] ?? "cn";
-    const input = formats[text(args.in)];
-    const entries: Array<{ proxy: RenameProxy; meta: NodeOrderMeta }> = [];
+    const readFormat = (value: string): NameFormat | undefined =>
+        Object.prototype.hasOwnProperty.call(formats, value) ? formats[value] : undefined;
+    const output = readFormat(text(args.out)) ?? "cn";
+    const input = readFormat(text(args.in));
+    const entries: Array<{ proxy: RenameProxy; meta: NodeOrderMeta; originalName: string }> = [];
 
     for (const original of proxies) {
         const split = splitPrefix(original.name);
@@ -138,7 +141,7 @@ export function renameNodes(proxies: readonly RenameProxy[], args: RenameArgs = 
         for (const [replacement, regex] of Object.entries(aliases)) {
             normalized = normalized.replace(regex, () => replacement);
         }
-        const region = findRegion(normalized, input);
+        const region = findRegion(rawName, input) ?? findRegion(normalized, input);
         if (!region && !enabled(args.nm)) continue;
 
         // Sort metadata is captured before any display option can discard it.
@@ -166,15 +169,21 @@ export function renameNodes(proxies: readonly RenameProxy[], args: RenameArgs = 
         } else {
             proxy.name = [nodePrefix, rawName].filter(Boolean).join(separator);
         }
-        entries.push({ proxy, meta });
+        entries.push({ proxy, meta, originalName: original.name });
     }
 
-    let ordered = orderNodes(entries, ({ meta }) => meta).map(({ proxy }) => proxy);
+    let ordered = orderNodes(entries, ({ meta }) => meta);
     if (enabled(args.key)) {
-        const numbered = numberNodes(ordered, text(args.sn, " "));
+        const numbered = numberNodes(ordered.map(({ proxy }) => proxy), text(args.sn, " "));
         ordered = ordered.filter((_, index) => !keyb.test(numbered[index].name));
     }
-    return numberNodes(ordered, text(args.sn, " "), enabled(args.one));
+    const numbered = numberNodes(
+        ordered.map(({ proxy }) => proxy), text(args.sn, " "), enabled(args.one)
+    );
+    return rewriteDialerReferences(
+        proxies,
+        ordered.map(({ originalName }, index) => ({ originalName, proxy: numbered[index] }))
+    );
 }
 
 function operator(proxies: RenameProxy[]): RenameProxy[] {

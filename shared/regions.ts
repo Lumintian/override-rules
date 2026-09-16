@@ -64,10 +64,11 @@ export function splitPrefix(name: string): { prefix: string; body: string } {
     const delimiter = name.indexOf("|");
     if (delimiter < 0) return { prefix: "", body: name };
     const head = name.slice(0, delimiter).trim();
+    const body = name.slice(delimiter + 1).trim();
     const match = findRegion(head);
     // "香港 | IPLC" is a node with labels, not a provider named 香港.
-    if (match && head.replace(match.text, "").replace(/[\u{1F1E6}-\u{1F1FF}\s]/gu, "") === "") {
+    if (!findRegion(body) && match && head.replace(match.text, "").replace(/[\u{1F1E6}-\u{1F1FF}\s]/gu, "") === "") {
         return { prefix: "", body: name };
     }
-    return { prefix: head.replace(/[\u{1F1E6}-\u{1F1FF}]/gu, "").trim(), body: name.slice(delimiter + 1).trim() };
+    return { prefix: head.replace(/[\u{1F1E6}-\u{1F1FF}]/gu, "").trim(), body };
 }
