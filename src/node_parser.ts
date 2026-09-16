@@ -14,8 +14,6 @@ const COUNTRY_MATCHERS = Object.entries(countriesMeta).map(([country, meta]) => 
 /** Parse canonical names first; preserve the override's existing city/airport aliases. */
 export function describeProxyNode(node: ProxyNode): NodeOrderMeta {
     const meta = describeName(node.name || "");
-    // The inherited renamer catalogue uses 马来; the group registry uses 马来西亚.
-    if (meta.country === "马来") return { ...meta, country: "马来西亚" };
     if (meta.country !== null) return meta;
 
     const { prefix, body } = splitPrefix(node.name || "");

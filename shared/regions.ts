@@ -49,7 +49,7 @@ export function findRegion(name: string, format?: NameFormat): RegionMatch | nul
             const match = regex.exec(name);
             if (!match) continue;
             return {
-                country: ZH[regionIndex],
+                country: ZH[regionIndex] === "马来" ? "马来西亚" : ZH[regionIndex],
                 regionIndex,
                 index: match.index + (token ? match[1].length : 0),
                 text: match[token ? 2 : 1],
