@@ -10,67 +10,24 @@
  * 完整 MIT 许可证及来源说明见 scripts/substore/LICENSE 与 README.md。
  */
 
+import { classifyNode, hasSpecialTag, numberNodes, orderNodes, readMultiplier } from "../../shared/node_order";
+import type { NodeOrderMeta } from "../../shared/node_order";
+import { FG, findRegion, regionNames, splitPrefix } from "../../shared/regions";
+import type { NameFormat } from "../../shared/regions";
+
 /**
- * 上游基线日期：2024-04-05 15:30:15
- * 用法：在 Sub-Store 节点处理流程中添加构建后的 rename.js 或 rename.min.js。
- * 参数通过 URL Fragment 传入，多个参数使用 "&" 连接；可追加 #noCache 禁用缓存。
- *
- *** 主要参数
- * [in=] 自动判断机场节点名类型 优先级 zh(中文) -> flag(国旗) -> quan(英文全称) -> en(英文简写)
- * 如果不准的情况, 可以加参数指定:
- *
- * [nm]    保留没有匹配到的节点
- * [in=zh] 或in=cn识别中文
- * [in=en] 或in=us 识别英文缩写
- * [in=flag] 或in=gq 识别国旗 如果加参数 in=flag 则识别国旗 脚本操作前面不要添加国旗操作 否则移除国旗后面脚本识别不到
- * [in=quan] 识别英文全称
-
- *
- * [out=]   输出节点名可选参数: (cn或zh ，us或en ，gq或flag ，quan) 对应：(中文，英文缩写 ，国旗 ，英文全称) 默认中文 例如 [out=en] 或 out=us 输出英文缩写
- *** 分隔符参数
- *
- * [fgf=]   节点名前缀或国旗分隔符，默认为空格；
- * [sn=]    设置国家与序号之间的分隔符，默认为空格；
- * 序号参数
- * [one]    清理只有一个节点的地区的01
- * [flag]   给节点前面加国旗
- *
- *** 前缀参数
- * [name=]  节点添加机场名称前缀；
- * [nf]     把 name= 的前缀值放在最前面
- *** 保留参数
- * [blkey=iplc+gpt+NF+IPLC] 用+号添加多个关键词 保留节点名的自定义字段 需要区分大小写!
- * 如果需要修改 保留的关键词 替换成别的 可以用 > 分割 例如 [#blkey=GPT>新名字+其他关键词] 这将把【GPT】替换成【新名字】
- * 例如      rename.min.js#flag&blkey=GPT>新名字+NF
- * [blgd]   保留: 家宽 IPLC ˣ² 等
- * [bl]     正则匹配保留 [0.1x, x0.2, 6x ,3倍]等标识
- * [nx]     保留1倍率与不显示倍率的
- * [blnx]   只保留高倍率
- * [clear]  清理乱名
- * [blpx]   如果用了上面的bl参数,对保留标识后的名称分组排序,如果没用上面的bl参数单独使用blpx则不起任何作用
- * [blockquic] blockquic=on 阻止; blockquic=off 不阻止
+ * URL Fragment 参数仍使用原有名称，本次不整体改造参数体系。
+ * in/out: cn(zh), us(en), quan, gq(flag); 未指定 in 时自动识别。
+ * name/nf: 名称前缀 / 前缀放在国旗之前。已有 "提供商 | 地区" 的前缀会保留。
+ * fgf/sn: 名称字段 / 编号分隔符，默认空格。
+ * flag/one: 添加国旗 / 单个 baseName 不显示 01。
+ * bl/blgd/blkey: 保留倍率 / 固定标签 / 自定义标签（+ 分隔，> 替换）。
+ * nx/blnx: 仅保留 1x 或未标倍率 / 仅保留 >1x；倍率按数值判断。
+ * clear/nm: 清理信息节点 / 保留无法识别地区的节点并置底。
+ * blpx: 不再需要，排序默认执行；权重在 shared/preferences.ts 中统一配置。
+ * blockquic: on/off 显式设置 block-quic；不传则保留节点现有字段。
  */
-
 interface RenameArgs {
-    nx?: boolean;
-    bl?: boolean;
-    nf?: boolean;
-    key?: boolean;
-    blgd?: boolean;
-    blpx?: boolean;
-    blnx?: boolean;
-    one?: boolean;
-    debug?: boolean;
-    clear?: boolean;
-    flag?: boolean;
-    nm?: boolean;
-    fgf?: string;
-    sn?: string;
-    name?: string;
-    blkey?: string;
-    blockquic?: string;
-    in?: string;
-    out?: string;
     [key: string]: string | boolean | undefined;
 }
 
@@ -80,62 +37,19 @@ interface RenameProxy {
     [key: string]: unknown;
 }
 
-type NameFormat = "cn" | "us" | "quan" | "gq";
-
 declare const $arguments: RenameArgs;
 
-// const inArg = { blkey: "iplc+GPT>GPTnewName+NF+IPLC", flag: true };
-const inArg = $arguments; // console.log(inArg)
-const nx = inArg.nx || false,
-    bl = inArg.bl || false,
-    nf = inArg.nf || false,
-    key = inArg.key || false,
-    blgd = inArg.blgd || false,
-    blpx = inArg.blpx || false,
-    blnx = inArg.blnx || false,
-    numone = inArg.one || false,
-    clear = inArg.clear || false,
-    addflag = inArg.flag || false,
-    nm = inArg.nm || false;
+const formats: Record<string, NameFormat> = {
+    cn: "cn", zh: "cn", us: "us", en: "us", quan: "quan", gq: "gq", flag: "gq",
+};
 
-const FGF = inArg.fgf === undefined ? " " : decodeURI(inArg.fgf),
-    XHFGF = inArg.sn === undefined ? " " : decodeURI(inArg.sn),
-    FNAME = inArg.name === undefined ? "" : decodeURI(inArg.name),
-    BLKEY = inArg.blkey === undefined ? "" : decodeURI(inArg.blkey),
-    blockquic = inArg.blockquic === undefined ? "" : decodeURI(inArg.blockquic),
-    nameMap: Record<string, NameFormat> = {
-        cn: "cn",
-        zh: "cn",
-        us: "us",
-        en: "us",
-        quan: "quan",
-        gq: "gq",
-        flag: "gq",
-    },
-    inname = inArg.in ? nameMap[inArg.in] || "" : "",
-    outputName = inArg.out ? nameMap[inArg.out] || "" : "";
-// prettier-ignore
-const FG = ['🇭🇰','🇲🇴','🇹🇼','🇯🇵','🇰🇷','🇸🇬','🇺🇸','🇬🇧','🇫🇷','🇩🇪','🇦🇺','🇦🇪','🇦🇫','🇦🇱','🇩🇿','🇦🇴','🇦🇷','🇦🇲','🇦🇹','🇦🇿','🇧🇭','🇧🇩','🇧🇾','🇧🇪','🇧🇿','🇧🇯','🇧🇹','🇧🇴','🇧🇦','🇧🇼','🇧🇷','🇻🇬','🇧🇳','🇧🇬','🇧🇫','🇧🇮','🇰🇭','🇨🇲','🇨🇦','🇨🇻','🇰🇾','🇨🇫','🇹🇩','🇨🇱','🇨🇴','🇰🇲','🇨🇬','🇨🇩','🇨🇷','🇭🇷','🇨🇾','🇨🇿','🇩🇰','🇩🇯','🇩🇴','🇪🇨','🇪🇬','🇸🇻','🇬🇶','🇪🇷','🇪🇪','🇪🇹','🇫🇯','🇫🇮','🇬🇦','🇬🇲','🇬🇪','🇬🇭','🇬🇷','🇬🇱','🇬🇹','🇬🇳','🇬🇾','🇭🇹','🇭🇳','🇭🇺','🇮🇸','🇮🇳','🇮🇩','🇮🇷','🇮🇶','🇮🇪','🇮🇲','🇮🇱','🇮🇹','🇨🇮','🇯🇲','🇯🇴','🇰🇿','🇰🇪','🇰🇼','🇰🇬','🇱🇦','🇱🇻','🇱🇧','🇱🇸','🇱🇷','🇱🇾','🇱🇹','🇱🇺','🇲🇰','🇲🇬','🇲🇼','🇲🇾','🇲🇻','🇲🇱','🇲🇹','🇲🇷','🇲🇺','🇲🇽','🇲🇩','🇲🇨','🇲🇳','🇲🇪','🇲🇦','🇲🇿','🇲🇲','🇳🇦','🇳🇵','🇳🇱','🇳🇿','🇳🇮','🇳🇪','🇳🇬','🇰🇵','🇳🇴','🇴🇲','🇵🇰','🇵🇦','🇵🇾','🇵🇪','🇵🇭','🇵🇹','🇵🇷','🇶🇦','🇷🇴','🇷🇺','🇷🇼','🇸🇲','🇸🇦','🇸🇳','🇷🇸','🇸🇱','🇸🇰','🇸🇮','🇸🇴','🇿🇦','🇪🇸','🇱🇰','🇸🇩','🇸🇷','🇸🇿','🇸🇪','🇨🇭','🇸🇾','🇹🇯','🇹🇿','🇹🇭','🇹🇬','🇹🇴','🇹🇹','🇹🇳','🇹🇷','🇹🇲','🇻🇮','🇺🇬','🇺🇦','🇺🇾','🇺🇿','🇻🇪','🇻🇳','🇾🇪','🇿🇲','🇿🇼','🇦🇩','🇷🇪','🇵🇱','🇬🇺','🇻🇦','🇱🇮','🇨🇼','🇸🇨','🇦🇶','🇬🇮','🇨🇺','🇫🇴','🇦🇽','🇧🇲','🇹🇱'];
-// prettier-ignore
-const EN = ['HK','MO','TW','JP','KR','SG','US','GB','FR','DE','AU','AE','AF','AL','DZ','AO','AR','AM','AT','AZ','BH','BD','BY','BE','BZ','BJ','BT','BO','BA','BW','BR','VG','BN','BG','BF','BI','KH','CM','CA','CV','KY','CF','TD','CL','CO','KM','CG','CD','CR','HR','CY','CZ','DK','DJ','DO','EC','EG','SV','GQ','ER','EE','ET','FJ','FI','GA','GM','GE','GH','GR','GL','GT','GN','GY','HT','HN','HU','IS','IN','ID','IR','IQ','IE','IM','IL','IT','CI','JM','JO','KZ','KE','KW','KG','LA','LV','LB','LS','LR','LY','LT','LU','MK','MG','MW','MY','MV','ML','MT','MR','MU','MX','MD','MC','MN','ME','MA','MZ','MM','NA','NP','NL','NZ','NI','NE','NG','KP','NO','OM','PK','PA','PY','PE','PH','PT','PR','QA','RO','RU','RW','SM','SA','SN','RS','SL','SK','SI','SO','ZA','ES','LK','SD','SR','SZ','SE','CH','SY','TJ','TZ','TH','TG','TO','TT','TN','TR','TM','VI','UG','UA','UY','UZ','VE','VN','YE','ZM','ZW','AD','RE','PL','GU','VA','LI','CW','SC','AQ','GI','CU','FO','AX','BM','TL'];
-// prettier-ignore
-const ZH = ['香港','澳门','台湾','日本','韩国','新加坡','美国','英国','法国','德国','澳大利亚','阿联酋','阿富汗','阿尔巴尼亚','阿尔及利亚','安哥拉','阿根廷','亚美尼亚','奥地利','阿塞拜疆','巴林','孟加拉国','白俄罗斯','比利时','伯利兹','贝宁','不丹','玻利维亚','波斯尼亚和黑塞哥维那','博茨瓦纳','巴西','英属维京群岛','文莱','保加利亚','布基纳法索','布隆迪','柬埔寨','喀麦隆','加拿大','佛得角','开曼群岛','中非共和国','乍得','智利','哥伦比亚','科摩罗','刚果(布)','刚果(金)','哥斯达黎加','克罗地亚','塞浦路斯','捷克','丹麦','吉布提','多米尼加共和国','厄瓜多尔','埃及','萨尔瓦多','赤道几内亚','厄立特里亚','爱沙尼亚','埃塞俄比亚','斐济','芬兰','加蓬','冈比亚','格鲁吉亚','加纳','希腊','格陵兰','危地马拉','几内亚','圭亚那','海地','洪都拉斯','匈牙利','冰岛','印度','印尼','伊朗','伊拉克','爱尔兰','马恩岛','以色列','意大利','科特迪瓦','牙买加','约旦','哈萨克斯坦','肯尼亚','科威特','吉尔吉斯斯坦','老挝','拉脱维亚','黎巴嫩','莱索托','利比里亚','利比亚','立陶宛','卢森堡','马其顿','马达加斯加','马拉维','马来','马尔代夫','马里','马耳他','毛利塔尼亚','毛里求斯','墨西哥','摩尔多瓦','摩纳哥','蒙古','黑山共和国','摩洛哥','莫桑比克','缅甸','纳米比亚','尼泊尔','荷兰','新西兰','尼加拉瓜','尼日尔','尼日利亚','朝鲜','挪威','阿曼','巴基斯坦','巴拿马','巴拉圭','秘鲁','菲律宾','葡萄牙','波多黎各','卡塔尔','罗马尼亚','俄罗斯','卢旺达','圣马力诺','沙特阿拉伯','塞内加尔','塞尔维亚','塞拉利昂','斯洛伐克','斯洛文尼亚','索马里','南非','西班牙','斯里兰卡','苏丹','苏里南','斯威士兰','瑞典','瑞士','叙利亚','塔吉克斯坦','坦桑尼亚','泰国','多哥','汤加','特立尼达和多巴哥','突尼斯','土耳其','土库曼斯坦','美属维尔京群岛','乌干达','乌克兰','乌拉圭','乌兹别克斯坦','委内瑞拉','越南','也门','赞比亚','津巴布韦','安道尔','留尼汪','波兰','关岛','梵蒂冈','列支敦士登','库拉索','塞舌尔','南极','直布罗陀','古巴','法罗群岛','奥兰群岛','百慕达','东帝汶'];
-// prettier-ignore
-const QC = ['Hong Kong','Macao','Taiwan','Japan','Korea','Singapore','United States','United Kingdom','France','Germany','Australia','Dubai','Afghanistan','Albania','Algeria','Angola','Argentina','Armenia','Austria','Azerbaijan','Bahrain','Bangladesh','Belarus','Belgium','Belize','Benin','Bhutan','Bolivia','Bosnia and Herzegovina','Botswana','Brazil','British Virgin Islands','Brunei','Bulgaria','Burkina-faso','Burundi','Cambodia','Cameroon','Canada','CapeVerde','CaymanIslands','Central African Republic','Chad','Chile','Colombia','Comoros','Congo-Brazzaville','Congo-Kinshasa','CostaRica','Croatia','Cyprus','Czech Republic','Denmark','Djibouti','Dominican Republic','Ecuador','Egypt','EISalvador','Equatorial Guinea','Eritrea','Estonia','Ethiopia','Fiji','Finland','Gabon','Gambia','Georgia','Ghana','Greece','Greenland','Guatemala','Guinea','Guyana','Haiti','Honduras','Hungary','Iceland','India','Indonesia','Iran','Iraq','Ireland','Isle of Man','Israel','Italy','Ivory Coast','Jamaica','Jordan','Kazakstan','Kenya','Kuwait','Kyrgyzstan','Laos','Latvia','Lebanon','Lesotho','Liberia','Libya','Lithuania','Luxembourg','Macedonia','Madagascar','Malawi','Malaysia','Maldives','Mali','Malta','Mauritania','Mauritius','Mexico','Moldova','Monaco','Mongolia','Montenegro','Morocco','Mozambique','Myanmar(Burma)','Namibia','Nepal','Netherlands','New Zealand','Nicaragua','Niger','Nigeria','NorthKorea','Norway','Oman','Pakistan','Panama','Paraguay','Peru','Philippines','Portugal','PuertoRico','Qatar','Romania','Russia','Rwanda','SanMarino','SaudiArabia','Senegal','Serbia','SierraLeone','Slovakia','Slovenia','Somalia','SouthAfrica','Spain','SriLanka','Sudan','Suriname','Swaziland','Sweden','Switzerland','Syria','Tajikstan','Tanzania','Thailand','Togo','Tonga','TrinidadandTobago','Tunisia','Turkey','Turkmenistan','U.S.Virgin Islands','Uganda','Ukraine','Uruguay','Uzbekistan','Venezuela','Vietnam','Yemen','Zambia','Zimbabwe','Andorra','Reunion','Poland','Guam','Vatican','Liechtensteins','Curacao','Seychelles','Antarctica','Gibraltar','Cuba','Faroe Islands','Ahvenanmaa','Bermuda','Timor-Leste'];
-const specialRegex = [/(\d\.)?\d+×/, /IPLC|IEPL|Kern|Edge|Pro|Std|Exp|Biz|Fam|Game|Buy|Zx|LB|Game/];
-const nameclear =
-    /(套餐|到期|有效|剩余|版本|已用|过期|失联|测试|官方|网址|备用|群|TEST|客服|网站|获取|订阅|流量|机场|下次|官址|联系|邮箱|工单|学术|USE|USED|TOTAL|EXPIRE|EMAIL)/i;
-// prettier-ignore
-const regexArray=[/ˣ²/, /ˣ³/, /ˣ⁴/, /ˣ⁵/, /ˣ⁶/, /ˣ⁷/, /ˣ⁸/, /ˣ⁹/, /ˣ¹⁰/, /ˣ²⁰/, /ˣ³⁰/, /ˣ⁴⁰/, /ˣ⁵⁰/, /IPLC/i, /IEPL/i, /核心/, /边缘/, /高级/, /标准/, /实验/, /商宽/, /家宽/, /游戏|game/i, /购物/, /专线/, /LB/, /cloudflare/i, /\budp\b/i, /\bgpt\b/i,/udpn\b/];
-// prettier-ignore
-const valueArray= [ "2×","3×","4×","5×","6×","7×","8×","9×","10×","20×","30×","40×","50×","IPLC","IEPL","Kern","Edge","Pro","Std","Exp","Biz","Fam","Game","Buy","Zx","LB","CF","UDP","GPT","UDPN"];
-const nameblnx = /(高倍|(?!1)2+(x|倍)|ˣ²|ˣ³|ˣ⁴|ˣ⁵|ˣ¹⁰)/i;
-const namenx = /(高倍|(?!1)(0\.|\d)+(x|倍)|ˣ²|ˣ³|ˣ⁴|ˣ⁵|ˣ¹⁰)/i;
-const keya =
-    /港|Hong|HK|新加坡|SG|Singapore|日本|Japan|JP|美国|United States|US|韩|土耳其|TR|Turkey|Korea|KR|🇸🇬|🇭🇰|🇯🇵|🇺🇸|🇰🇷|🇹🇷/i;
-const keyb =
-    /(((1|2|3|4)\d)|(香港|Hong|HK) 0[5-9]|((新加坡|SG|Singapore|日本|Japan|JP|美国|United States|US|韩|土耳其|TR|Turkey|Korea|KR) 0[3-9]))/i;
-const rurekey: Record<string, RegExp> = {
+// Only information markers: "备用", "测试" and "群岛" can be real node names.
+const informationName = /剩余|已用|套餐|到期|有效期|下次重置|重置时间|官网|官址|官方网站|订阅地址|联系客服|工单|(?:^|\b)(?:USED|TOTAL|EXPIRE|EMAIL)(?:\b|$)|^流量\s*[:：]/i;
+const keya = /港|Hong|HK|新加坡|SG|Singapore|日本|Japan|JP|美国|United States|US|韩|土耳其|TR|Turkey|Korea|KR|🇸🇬|🇭🇰|🇯🇵|🇺🇸|🇰🇷|🇹🇷/i;
+const keyb = /(((1|2|3|4)\d)|(香港|Hong|HK) 0[5-9]|((新加坡|SG|Singapore|日本|Japan|JP|美国|United States|US|韩|土耳其|TR|Turkey|Korea|KR) 0[3-9]))/i;
+
+// Preserve the existing alias coverage; replace directly to avoid stateful /g.test().
+const aliases: Record<string, RegExp> = {
     GB: /UK/g,
     "B-G-P": /BGP/g,
     "Russia Moscow": /Moscow/g,
@@ -173,248 +87,99 @@ const rurekey: Record<string, RegExp> = {
     Esnc: /esnc/gi,
 };
 
-let GetK = false,
-    AMK: Array<[string, string]> = [];
+const fixedTags: Array<[RegExp, string]> = [
+    [/\bIPLC\b/i, "IPLC"], [/\bIEPL\b/i, "IEPL"], [/核心/, "Kern"],
+    [/边缘/, "Edge"], [/高级/, "Pro"], [/标准/, "Std"], [/实验/, "Exp"],
+    [/商宽/, "Biz"], [/家宽/, "Fam"], [/游戏|\bgame\b/i, "Game"],
+    [/购物/, "Buy"], [/专线/, "Zx"], [/\bLB\b/, "LB"], [/cloudflare/i, "CF"],
+    [/\budp\b/i, "UDP"], [/\bgpt\b/i, "GPT"], [/\budpn\b/i, "UDPN"],
+    [/自建|\bself\b/i, "自建"], [/落地|\blanding\b/i, "落地"],
+];
 
-function ObjKA(input: Record<string, string>): void {
-    GetK = true;
-    AMK = Object.entries(input);
+function enabled(value: string | boolean | undefined): boolean {
+    return value === true || value === "" || (typeof value === "string" && /^(true|1|on)$/i.test(value));
 }
 
-function operator(pro: RenameProxy[]): RenameProxy[] {
-    const Allmap: Record<string, string> = {};
-    const outList = getList(outputName);
-    let inputList: string[][],
-        retainKey: string | string[] = "";
-    if (inname !== "") {
-        inputList = [getList(inname)];
-    } else {
-        inputList = [ZH, FG, QC, EN];
+function text(value: string | boolean | undefined, fallback = ""): string {
+    if (typeof value !== "string") return fallback;
+    try {
+        return decodeURIComponent(value);
+    } catch {
+        return value;
     }
+}
 
-    inputList.forEach((arr) => {
-        arr.forEach((value, valueIndex) => {
-            Allmap[value] = outList[valueIndex];
-        });
-    });
+function customTags(name: string, expression: string): string[] {
+    return expression.split("+").flatMap((rule) => {
+        const [match, ...replacement] = rule.split(">");
+        if (!match || !name.includes(match)) return [];
+        return [replacement.length ? replacement.join(">") : match];
+    }).filter(Boolean);
+}
 
-    if (clear || nx || blnx || key) {
-        pro = pro.filter((res) => {
-            const resname = res.name;
-            const shouldKeep =
-                !(clear && nameclear.test(resname)) &&
-                !(nx && namenx.test(resname)) &&
-                !(blnx && !nameblnx.test(resname)) &&
-                !(key && !(keya.test(resname) && /2|4|6|7/i.test(resname)));
-            return shouldKeep;
-        });
-    }
+export function renameNodes(proxies: readonly RenameProxy[], args: RenameArgs = {}): RenameProxy[] {
+    const separator = text(args.fgf, " ");
+    const prefix = text(args.name);
+    const output = formats[text(args.out)] ?? "cn";
+    const input = formats[text(args.in)];
+    const entries: Array<{ proxy: RenameProxy; meta: NodeOrderMeta }> = [];
 
-    const BLKEYS = BLKEY ? BLKEY.split("+") : [];
-    const removedNodes = new Set<RenameProxy>();
+    for (const original of proxies) {
+        const split = splitPrefix(original.name);
+        const rawName = split.body;
+        const nodePrefix = prefix || (split.prefix ? `${split.prefix} |` : "");
+        if (enabled(args.clear) && informationName.test(rawName)) continue;
+        const multiplier = readMultiplier(rawName);
+        if (enabled(args.nx) && multiplier !== null && multiplier !== 1) continue;
+        if (enabled(args.blnx) && !(multiplier !== null && multiplier > 1)) continue;
+        if (enabled(args.key) && !(keya.test(rawName) && /2|4|6|7/i.test(rawName))) continue;
 
-    pro.forEach((e) => {
-        let bktf = false;
-        const ens = e.name;
-        // 预处理 防止预判或遗漏
-        Object.keys(rurekey).forEach((ikey) => {
-            if (rurekey[ikey].test(e.name)) {
-                e.name = e.name.replace(rurekey[ikey], ikey);
-                if (BLKEY) {
-                    bktf = true;
-                    let BLKEY_REPLACE = "",
-                        re = false;
-                    BLKEYS.forEach((i) => {
-                        if (i.includes(">") && ens.includes(i.split(">")[0])) {
-                            if (rurekey[ikey].test(i.split(">")[0])) {
-                                e.name += " " + i.split(">")[0];
-                            }
-                            if (i.split(">")[1]) {
-                                BLKEY_REPLACE = i.split(">")[1];
-                                re = true;
-                            }
-                        } else {
-                            if (ens.includes(i)) {
-                                e.name += " " + i;
-                            }
-                        }
-                        retainKey = re
-                            ? BLKEY_REPLACE
-                            : BLKEYS.filter((items) => e.name.includes(items));
-                    });
-                }
+        let normalized = rawName;
+        for (const [replacement, regex] of Object.entries(aliases)) {
+            normalized = normalized.replace(regex, () => replacement);
+        }
+        const region = findRegion(normalized, input);
+        if (!region && !enabled(args.nm)) continue;
+
+        // Sort metadata is captured before any display option can discard it.
+        const meta: NodeOrderMeta = {
+            country: region?.country ?? null,
+            prefix: nodePrefix.replace(/[\s|]+$/g, ""),
+            category: classifyNode(multiplier, hasSpecialTag(rawName)),
+        };
+        const proxy = { ...original };
+        const blockQuic = text(args.blockquic);
+        if (blockQuic === "on" || blockQuic === "off") proxy["block-quic"] = blockQuic;
+
+        if (region) {
+            const labels = customTags(rawName, text(args.blkey));
+            if ((enabled(args.bl) || (enabled(args.blgd) && /ˣ/.test(rawName))) && multiplier !== null && multiplier !== 1) {
+                labels.push(`${multiplier}×`);
             }
-        });
-        if (blockquic === "on") {
-            e["block-quic"] = "on";
-        } else if (blockquic === "off") {
-            e["block-quic"] = "off";
-        } else {
-            delete e["block-quic"];
-        }
-
-        // 自定义
-        if (!bktf && BLKEY) {
-            let BLKEY_REPLACE = "",
-                re = false;
-            BLKEYS.forEach((i) => {
-                if (i.includes(">") && e.name.includes(i.split(">")[0])) {
-                    if (i.split(">")[1]) {
-                        BLKEY_REPLACE = i.split(">")[1];
-                        re = true;
-                    }
-                }
-            });
-            retainKey = re ? BLKEY_REPLACE : BLKEYS.filter((items) => e.name.includes(items));
-        }
-
-        let ikey = "",
-            ikeys = "";
-        // 保留固定格式 倍率
-        if (blgd) {
-            regexArray.forEach((regex, index) => {
-                if (regex.test(e.name)) {
-                    ikeys = valueArray[index];
-                }
-            });
-        }
-
-        // 正则 匹配倍率
-        if (bl) {
-            const match = e.name.match(
-                /((倍率|X|x|×)\D?((\d{1,3}\.)?\d+)\D?)|((\d{1,3}\.)?\d+)(倍|X|x|×)/
-            );
-            if (match) {
-                const multiplier = match[0].match(/(\d[\d.]*)/);
-                if (multiplier) {
-                    const rev = multiplier[0];
-                    if (rev !== "1") {
-                        const newValue = rev + "×";
-                        ikey = newValue;
-                    }
-                }
+            if (enabled(args.blgd)) {
+                labels.push(...fixedTags.filter(([regex]) => regex.test(rawName)).map(([, label]) => label));
             }
-        }
-
-        if (!GetK) ObjKA(Allmap);
-        // 匹配 Allkey 地区
-        const findKey = AMK.find(([key]) => e.name.includes(key));
-
-        let firstName = "",
-            nNames = "";
-
-        if (nf) {
-            firstName = FNAME;
+            const flag = enabled(args.flag) && output !== "gq" ? FG[region.regionIndex] : "";
+            const leading = enabled(args.nf) ? [nodePrefix, flag] : [flag, nodePrefix];
+            proxy.name = [...leading, regionNames[output][region.regionIndex], ...new Set(labels)]
+                .filter(Boolean).join(separator);
         } else {
-            nNames = FNAME;
+            proxy.name = [nodePrefix, rawName].filter(Boolean).join(separator);
         }
-        if (findKey?.[1]) {
-            const findKeyValue = findKey[1];
-            let usflag = "";
-            if (addflag) {
-                const index = outList.indexOf(findKeyValue);
-                if (index !== -1) {
-                    usflag = FG[index];
-                    usflag = usflag === "🇹🇼" ? "🇨🇳" : usflag;
-                }
-            }
-            const nameParts = ([] as string[])
-                .concat(firstName, usflag, nNames, findKeyValue, retainKey, ikey, ikeys)
-                .filter((part) => part !== "");
-            e.name = nameParts.join(FGF);
-        } else {
-            if (nm) {
-                e.name = FNAME + FGF + e.name;
-            } else {
-                removedNodes.add(e);
-            }
-        }
-    });
-    pro = pro.filter((node) => !removedNodes.has(node));
-    jxh(pro);
-    if (numone) oneP(pro);
-    if (blpx) pro = fampx(pro);
-    if (key) pro = pro.filter((node) => !keyb.test(node.name));
-    return pro;
-}
-
-function getList(arg: NameFormat | ""): string[] {
-    switch (arg) {
-        case "us":
-            return EN;
-        case "gq":
-            return FG;
-        case "quan":
-            return QC;
-        default:
-            return ZH;
-    }
-}
-
-interface RenameGroup {
-    name: string;
-    count: number;
-    items: RenameProxy[];
-}
-
-function jxh(proxies: RenameProxy[]): RenameProxy[] {
-    const groups = proxies.reduce<RenameGroup[]>((result, proxy) => {
-        const group = result.find((item) => item.name === proxy.name);
-        if (group) {
-            group.count += 1;
-            group.items.push({
-                ...proxy,
-                name: `${proxy.name}${XHFGF}${group.count.toString().padStart(2, "0")}`,
-            });
-        } else {
-            result.push({
-                name: proxy.name,
-                count: 1,
-                items: [{ ...proxy, name: `${proxy.name}${XHFGF}01` }],
-            });
-        }
-        return result;
-    }, []);
-    const renamed = groups.flatMap((group) => group.items);
-    proxies.splice(0, proxies.length, ...renamed);
-    return proxies;
-}
-
-function oneP(proxies: RenameProxy[]): RenameProxy[] {
-    const groups = proxies.reduce<Record<string, RenameProxy[]>>((result, proxy) => {
-        const name = proxy.name.replace(/[^A-Za-z0-9\u00C0-\u017F\u4E00-\u9FFF]+\d+$/, "");
-        if (!result[name]) result[name] = [];
-        result[name].push(proxy);
-        return result;
-    }, {});
-
-    for (const group of Object.values(groups)) {
-        if (group.length === 1 && group[0].name.endsWith("01")) {
-            group[0].name = group[0].name.replace(/[^.]01/, "");
-        }
-    }
-    return proxies;
-}
-
-function fampx(proxies: RenameProxy[]): RenameProxy[] {
-    const matched: RenameProxy[] = [];
-    const unmatched: RenameProxy[] = [];
-    for (const proxy of proxies) {
-        const hasSpecialLabel = specialRegex.some((regex) => regex.test(proxy.name));
-        if (hasSpecialLabel) matched.push(proxy);
-        else unmatched.push(proxy);
+        entries.push({ proxy, meta });
     }
 
-    const priorities = matched.map((proxy) =>
-        specialRegex.findIndex((regex) => regex.test(proxy.name))
-    );
-    matched.sort(
-        (a, b) =>
-            priorities[matched.indexOf(a)] - priorities[matched.indexOf(b)] ||
-            a.name.localeCompare(b.name)
-    );
-    unmatched.sort((a, b) => proxies.indexOf(a) - proxies.indexOf(b));
-    return unmatched.concat(matched);
+    let ordered = orderNodes(entries, ({ meta }) => meta).map(({ proxy }) => proxy);
+    if (enabled(args.key)) {
+        const numbered = numberNodes(ordered, text(args.sn, " "));
+        ordered = ordered.filter((_, index) => !keyb.test(numbered[index].name));
+    }
+    return numberNodes(ordered, text(args.sn, " "), enabled(args.one));
+}
+
+function operator(proxies: RenameProxy[]): RenameProxy[] {
+    const args = typeof $arguments === "undefined" ? {} : $arguments;
+    return renameNodes(proxies, args);
 }
 
 (globalThis as Record<string, unknown>).operator = operator;
