@@ -38,6 +38,7 @@ const engine = new PreviewEngine(PROJECT_ROOT);
 function copiedSources(): string {
     const root = mkdtempSync(path.join(tmpdir(), "override-preview-"));
     cpSync(path.join(PROJECT_ROOT, "src"), path.join(root, "src"), { recursive: true });
+    cpSync(path.join(PROJECT_ROOT, "shared"), path.join(root, "shared"), { recursive: true });
     cpSync(path.join(PROJECT_ROOT, "scripts/substore"), path.join(root, "scripts/substore"), {
         recursive: true,
     });
@@ -418,4 +419,18 @@ test("SSH-style TCP forwarding works with a different local port and preserves o
         ).status,
         403
     );
+});
+
+test("shared weights hot-reload into preview node and group order", async (t) => {
+    const root = copiedSources();
+    t.after(() => rmSync(root, { recursive: true, force: true }));
+    const local = new PreviewEngine(root);
+    const input = { ...request, content: "香港 A\n新加坡 A", rename: false, overrideArgs: "threshold=1" };
+    const before = await local.preview(input);
+    const file = path.join(root, "shared/preferences.ts");
+    writeFileSync(file, readFileSync(file, "utf8").replace("新加坡: 20", "新加坡: 5"));
+    const after = await local.preview(input);
+    assert.notEqual(after.revision, before.revision);
+    assert.deepEqual(after.config.proxies!.map((node) => node.name), ["新加坡 A", "香港 A"]);
+    assert.deepEqual(getGroup(after.config, "手动选择").proxies, ["新加坡 A", "香港 A"]);
 });
