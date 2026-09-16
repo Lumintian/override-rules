@@ -141,7 +141,7 @@ export function buildProxyGroups({
             name: PROXY_GROUPS.MATCH,
             icon: `${CDN_URL}/gh/Koolson/Qure@master/IconSet/Color/Final.png`,
             type: "select",
-            proxies: [PROXY_GROUPS.SELECT, "DIRECT"],
+            proxies: [PROXY_GROUPS.SELECT, ...defaultSelector],
         },
         landing
             ? {
