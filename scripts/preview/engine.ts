@@ -1,5 +1,4 @@
-import { createHash } from "node:crypto";
-import { readFileSync, readdirSync } from "node:fs";
+import { sourceRevision } from "./revision";
 import path from "node:path";
 import vm from "node:vm";
 import { build } from "esbuild";
@@ -71,14 +70,7 @@ export class PreviewEngine {
     constructor(private readonly root: string) {}
 
     revision(): string {
-        const hash = createHash("sha256");
-        const src = path.join(this.root, "src");
-        const files = readdirSync(src, { recursive: true })
-            .filter((file): file is string => typeof file === "string" && file.endsWith(".ts"))
-            .map((file) => path.join(src, file));
-        files.push(path.join(this.root, "scripts/substore/rename.ts"));
-        for (const file of files.sort()) hash.update(file).update(readFileSync(file));
-        return hash.digest("hex").slice(0, 16);
+        return sourceRevision(this.root);
     }
 
     private sources(renameEnabled: boolean): Promise<CompiledSources> {
@@ -219,7 +211,7 @@ export class PreviewEngine {
             warnings.push("节点名称与策略组名称冲突，实际配置可能无法加载，请调整节点命名。");
         if (groups.some((group) => group.filter))
             warnings.push(
-                "正则组成员按当前名称使用 JavaScript 近似模拟，不是 Mihomo 运行结果；独立正则可能跨组匹配，也可能重新包含落地节点。"
+                "正则组成员按当前名称使用 JavaScript 近似模拟，不是 Mihomo 运行结果；独立正则可能跨组匹配、重新包含落地节点，实际成员顺序也可能不同。"
             );
         const members = resolveMembers(config, warnings);
         const known = new Set([

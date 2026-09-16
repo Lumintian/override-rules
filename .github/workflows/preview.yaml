@@ -6,6 +6,7 @@ name: Deploy Preview
       - main
     paths:
       - 'src/**'
+      - 'shared/**'
       - 'scripts/**'
       - '.github/workflows/preview.yaml'
 
@@ -48,6 +49,8 @@ jobs:
           cp dist/convert.min.js publish/convert.min.js
           cp dist/rename.js publish/rename.js
           cp dist/rename.min.js publish/rename.min.js
+          cp dist/sort.js publish/sort.js
+          cp dist/sort.min.js publish/sort.min.js
           cp -a dist/yamls/. publish/yamls/
 
           RELEASED_AT="$(date -u +'%Y-%m-%dT%H:%M:%SZ')"

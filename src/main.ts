@@ -26,6 +26,7 @@ import {
     parseCountries,
     parseNodesByLanding,
     parseTailscale,
+    sortProxyNodes,
 } from "./node_parser";
 import { buildRules } from "./rules";
 import { ruleProviders } from "./rule_providers";
@@ -51,27 +52,27 @@ function getRawArgs(): ScriptArgs {
     }
 }
 
-const rawArgs = getRawArgs();
-const {
-    groupType,
-    ipv6Enabled,
-    fullConfig,
-    keepAliveEnabled,
-    fakeIPEnabled,
-    quicEnabled,
-    regexFilter,
-    tunEnabled,
-    countryThreshold,
-    countryExtraCounts,
-} = buildFeatureFlags(rawArgs);
-
-function main(config: ClashConfig): ClashConfig {
+export function main(config: ClashConfig, args: ScriptArgs = getRawArgs()): ClashConfig {
+    const {
+        groupType,
+        ipv6Enabled,
+        fullConfig,
+        keepAliveEnabled,
+        fakeIPEnabled,
+        quicEnabled,
+        regexFilter,
+        tunEnabled,
+        countryThreshold,
+        countryExtraCounts,
+    } = buildFeatureFlags(args);
     if (!config.proxies || !Array.isArray(config.proxies)) {
         throw new Error("[override-rules] 错误：Clash 配置中缺少有效的 proxies 字段");
     }
-    const { landingNodes, nonLandingNodes } = parseNodesByLanding(config.proxies);
+    // Order the merged collection once before deriving every explicit candidate list.
+    const proxies = sortProxyNodes(config.proxies);
+    const { landingNodes, nonLandingNodes } = parseNodesByLanding(proxies);
     const landing = landingNodes.length > 0 && nonLandingNodes.length > 0;
-    const countryNodes = parseCountries(landing ? nonLandingNodes : config.proxies);
+    const countryNodes = parseCountries(landing ? nonLandingNodes : proxies);
     const countryNames = getActiveCountryNames(countryNodes, countryThreshold);
     const countryGroups = buildCountryGroups({
         regexFilter,
@@ -80,8 +81,8 @@ function main(config: ClashConfig): ClashConfig {
         countryNodes,
         countryExtraCounts,
     });
-    const allNodes = config.proxies.map((node) => node.name);
-    const tailscaleNodes = parseTailscale(config.proxies);
+    const allNodes = proxies.map((node) => node.name);
+    const tailscaleNodes = parseTailscale(proxies);
     const hasTailscale = tailscaleNodes.length > 0;
 
     const { defaultProxies, defaultProxiesDirect, defaultSelector, frontProxySelector } =
@@ -109,15 +110,15 @@ function main(config: ClashConfig): ClashConfig {
     proxyGroups.push({
         name: PROXY_GROUPS.GLOBAL,
         icon: `${CDN_URL}/gh/Koolson/Qure@master/IconSet/Color/Global.png`,
-        "include-all": true,
+        // Explicit names preserve shared ordering; include-all may reorder dynamically.
         type: "select",
-        proxies: globalProxies,
+        proxies: [...globalProxies, ...allNodes],
     });
 
     const finalRules = buildRules({ quicEnabled }, hasTailscale);
 
     return {
-        proxies: config.proxies,
+        proxies,
         ...(config.hosts !== undefined && { hosts: config.hosts }),
         ...(fullConfig && {
             "mixed-port": 7890,
