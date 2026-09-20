@@ -8,6 +8,10 @@ import type {
 } from "./types";
 import { isNotNull } from "./utils";
 
+function escapeRegex(value: string): string {
+    return value.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+}
+
 interface BuildGroupByTypeInput {
     name: string;
     icon: string;
@@ -63,6 +67,7 @@ export function buildCountryGroups({
     countryNames,
     countryNodes,
     countryExtraCounts,
+    excludedNodeNames,
 }: BuildCountryGroupsInput): ProxyGroup[] {
     return getActiveCountryNames(countryNodes, 1).flatMap((country) => {
         const meta = countriesMeta[country];
@@ -70,7 +75,19 @@ export function buildCountryGroups({
             ? {
                   "include-all": true,
                   filter: meta.pattern,
-                  ...(meta.excludePattern ? { "exclude-filter": meta.excludePattern } : {}),
+                  ...(excludedNodeNames.length > 0
+                      ? {
+                            "exclude-filter": [
+                                ...excludedNodeNames.map((name) => `^${escapeRegex(name)}$`),
+                                meta.excludePattern,
+                            ]
+                                .filter(Boolean)
+                                .map((pattern) => `(?:${pattern})`)
+                                .join("|"),
+                        }
+                      : meta.excludePattern
+                        ? { "exclude-filter": meta.excludePattern }
+                        : {}),
               }
             : { proxies: countryNodes[country].map((node) => node.name).filter(isNotNull) };
         const groups: ProxyGroup[] = [];
@@ -107,12 +124,11 @@ export function buildProxyGroups({
     countryNames,
     countryGroups,
     tailscaleNodes,
-    landing,
-    landingNodes,
+    landingChains,
     defaultProxies,
     defaultProxiesDirect,
     defaultSelector,
-    frontProxySelector,
+    frontProxySelectors,
 }: BuildProxyGroupsInput): ProxyGroup[] {
     const hasTW = countryNames.includes("台湾");
     const hasHK = countryNames.includes("香港");
@@ -151,22 +167,20 @@ export function buildProxyGroups({
             type: "select",
             proxies: [PROXY_GROUPS.SELECT, ...defaultSelector],
         },
-        landing
-            ? {
-                  name: PROXY_GROUPS.FRONT_PROXY,
-                  icon: `${CDN_URL}/gh/Koolson/Qure@master/IconSet/Color/Area.png`,
-                  type: "select",
-                  proxies: frontProxySelector,
-              }
-            : null,
-        landing
-            ? {
-                  name: PROXY_GROUPS.LANDING,
-                  icon: `${CDN_URL}/gh/Koolson/Qure@master/IconSet/Color/Airport.png`,
-                  type: "select",
-                  proxies: landingNodes.map((node) => node.name).filter(isNotNull),
-              }
-            : null,
+        ...landingChains.flatMap((chain): ProxyGroup[] => [
+            {
+                name: chain.frontGroupName,
+                icon: `${CDN_URL}/gh/Koolson/Qure@master/IconSet/Color/Area.png`,
+                type: "select",
+                proxies: frontProxySelectors[chain.id] ?? ["DIRECT"],
+            },
+            {
+                name: chain.landingGroupName,
+                icon: `${CDN_URL}/gh/Koolson/Qure@master/IconSet/Color/Airport.png`,
+                type: "select",
+                proxies: chain.nodes.map((node) => node.name).filter(isNotNull),
+            },
+        ]),
         {
             name: PROXY_GROUPS.STATIC_RESOURCES,
             icon: `${CDN_URL}/gh/Koolson/Qure@master/IconSet/Color/Cloudflare.png`,

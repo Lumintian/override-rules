@@ -187,7 +187,7 @@ test("disabling rename preserves names and ignores inactive rename arguments", a
     assert.equal(getGroup(result.config, "香港节点").type, "select");
 });
 
-test("regex members include real matching candidates and preserve explicit GLOBAL groups", async () => {
+test("regex members exclude landing nodes and preserve explicit GLOBAL groups", async () => {
     const result = await engine.preview({
         ...request,
         rename: false,
@@ -200,9 +200,9 @@ test("regex members include real matching candidates and preserve explicit GLOBA
         }),
         overrideArgs: "us=1&regex=true",
     });
-    assert.deepEqual(result.members["美国额外1"], ["美国 A", "美国 B", "美国 落地"]);
+    assert.deepEqual(result.members["美国额外1"], ["美国 A", "美国 B"]);
     assert.ok(result.members.GLOBAL.includes("美国额外1"));
-    assert.ok(result.warnings.some((warning) => warning.includes("落地")));
+    assert.ok(result.warnings.some((warning) => warning.includes("正则组成员")));
     const enumResult = await engine.preview({
         ...request,
         rename: false,

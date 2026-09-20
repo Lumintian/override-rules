@@ -19,6 +19,9 @@ function parseGroupType(args: ScriptArgs): GroupType {
 
 // 防止错误参数生成过多策略组；超出范围的值视为未启用。
 const MAX_EXTRA_GROUPS_PER_COUNTRY = 100;
+const countryNameByCode: ReadonlyMap<string, string> = new Map(
+    Object.entries(countriesMeta).map(([country, meta]) => [meta.code, country])
+);
 
 function parseExtraGroupCount(value: unknown): number {
     if (typeof value !== "string" && typeof value !== "number") return 0;
@@ -26,6 +29,30 @@ function parseExtraGroupCount(value: unknown): number {
     if (!/^\d+$/.test(text)) return 0;
     const count = Number(text);
     return Number.isSafeInteger(count) && count <= MAX_EXTRA_GROUPS_PER_COUNTRY ? count : 0;
+}
+
+function parseFrontCountryNames(args: ScriptArgs): Record<string, string[]> {
+    const mappings: Record<string, string[]> = Object.create(null);
+    for (const [rawKey, rawValue] of Object.entries(args)) {
+        const key = rawKey.toLowerCase();
+        const match = key === "front" ? [key, ""] : /^front_([a-z])$/.exec(key);
+        if (!match) continue;
+        if (typeof rawValue !== "string") {
+            throw new Error(`[override-rules] ${rawKey} 必须是逗号分隔的地区代码`);
+        }
+        const chainId = match[1].toUpperCase();
+        const countryNames: string[] = [];
+        for (const token of rawValue.split(",").map((item) => item.trim().toLowerCase())) {
+            if (!token) continue;
+            const country = countryNameByCode.get(token);
+            if (!country) {
+                throw new Error(`[override-rules] ${rawKey} 包含不支持的地区代码：${token}`);
+            }
+            if (!countryNames.includes(country)) countryNames.push(country);
+        }
+        mappings[chainId] = countryNames;
+    }
+    return mappings;
 }
 
 /**
@@ -50,5 +77,6 @@ export function buildFeatureFlags(args: ScriptArgs): FeatureFlags {
                 parseExtraGroupCount(args[meta.code]),
             ])
         ),
+        frontCountryNamesByChain: parseFrontCountryNames(args),
     };
 }

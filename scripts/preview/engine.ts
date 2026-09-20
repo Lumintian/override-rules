@@ -153,8 +153,8 @@ export class PreviewEngine {
                 `
                 const input = JSON.parse(__input);
                 const config = main(input);
-                const chain = config["proxy-groups"].some(group => group.name === PreviewCore.PROXY_GROUPS.FRONT_PROXY);
-                const nodes = chain ? PreviewCore.parseNodesByLanding(config.proxies).nonLandingNodes : config.proxies;
+                const parsedLanding = PreviewCore.parseNodesByLanding(config.proxies);
+                const nodes = parsedLanding.landingChains.length > 0 && parsedLanding.nonLandingNodes.length > 0 ? parsedLanding.nonLandingNodes : config.proxies;
                 __result = JSON.stringify({ config, countries: PreviewCore.parseCountries(nodes), threshold: PreviewCore.buildFeatureFlags($arguments).countryThreshold, suffix: PreviewCore.NODE_SUFFIX });
             `,
                 renamed.config,
@@ -195,7 +195,7 @@ export class PreviewEngine {
         const unknown = nodes.filter(
             (node) =>
                 !byName.has(node.name) &&
-                node["dialer-proxy"] !== "前置代理" &&
+                !/^前置代理(?:[A-Z])?$/.test(String(node["dialer-proxy"] ?? "")) &&
                 node.type !== "tailscale"
         );
         if (unknown.length) {
@@ -214,7 +214,7 @@ export class PreviewEngine {
             warnings.push("节点名称与策略组名称冲突，实际配置可能无法加载，请调整节点命名。");
         if (groups.some((group) => group.filter))
             warnings.push(
-                "正则组成员按当前名称使用 JavaScript 近似模拟，不是 Mihomo 运行结果；独立正则可能跨组匹配、重新包含落地节点，实际成员顺序也可能不同。"
+                "正则组成员按当前名称使用 JavaScript 近似模拟，不是 Mihomo 运行结果；独立正则可能跨组匹配，实际成员顺序也可能不同。"
             );
         const members = resolveMembers(config, warnings);
         const known = new Set([
