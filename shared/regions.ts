@@ -17,7 +17,12 @@ export const FG = EN.map((code) =>
     [...code].map((letter) => String.fromCodePoint(0x1f1e6 + letter.charCodeAt(0) - 65)).join("")
 );
 
-export const regionNames: Record<NameFormat, readonly string[]> = { cn: ZH, us: EN, quan: QC, gq: FG };
+export const regionNames: Record<NameFormat, readonly string[]> = {
+    cn: ZH,
+    us: EN,
+    quan: QC,
+    gq: FG,
+};
 
 export interface RegionMatch {
     country: string;
@@ -30,18 +35,26 @@ export interface RegionMatch {
 const matchers = Object.fromEntries(
     Object.entries(regionNames).map(([format, names]) => [
         format,
-        names.map((text, regionIndex) => {
-            const escaped = text.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
-            const token = format === "us" || format === "quan";
-            return {
-                regionIndex,
-                length: text.length,
-                regex: new RegExp(token ? `(^|[^A-Za-z])(${escaped})(?=$|[^A-Za-z])` : `(${escaped})`, "i"),
-                token,
-            };
-        }).sort((a, b) => b.length - a.length),
+        names
+            .map((text, regionIndex) => {
+                const escaped = text.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+                const token = format === "us" || format === "quan";
+                return {
+                    regionIndex,
+                    length: text.length,
+                    regex: new RegExp(
+                        token ? `(^|[^A-Za-z])(${escaped})(?=$|[^A-Za-z])` : `(${escaped})`,
+                        "i"
+                    ),
+                    token,
+                };
+            })
+            .sort((a, b) => b.length - a.length),
     ])
-) as Record<NameFormat, Array<{ regionIndex: number; length: number; regex: RegExp; token: boolean }>>;
+) as Record<
+    NameFormat,
+    Array<{ regionIndex: number; length: number; regex: RegExp; token: boolean }>
+>;
 
 export function findRegion(name: string, format?: NameFormat): RegionMatch | null {
     for (const current of format ? [format] : (["cn", "gq", "quan", "us"] as const)) {
@@ -67,7 +80,11 @@ export function splitPrefix(name: string): { prefix: string; body: string } {
     const body = name.slice(delimiter + 1).trim();
     const match = findRegion(head);
     // "香港 | IPLC" is a node with labels, not a provider named 香港.
-    if (!findRegion(body) && match && head.replace(match.text, "").replace(/[\u{1F1E6}-\u{1F1FF}\s]/gu, "") === "") {
+    if (
+        !findRegion(body) &&
+        match &&
+        head.replace(match.text, "").replace(/[\u{1F1E6}-\u{1F1FF}\s]/gu, "") === ""
+    ) {
         return { prefix: "", body: name };
     }
     return { prefix: head.replace(/[\u{1F1E6}-\u{1F1FF}]/gu, "").trim(), body };

@@ -20,7 +20,10 @@ test("canonical fixed labels survive another renaming pass", () => {
 });
 
 test("invalid prototype-like format names fall back safely", () => {
-    assert.equal(renameNodes(named("香港"), { out: "__proto__", in: "constructor" })[0].name, "香港 01");
+    assert.equal(
+        renameNodes(named("香港"), { out: "__proto__", in: "constructor" })[0].name,
+        "香港 01"
+    );
 });
 
 test("display names are numbered before concrete dialer references are rewritten", () => {
@@ -40,18 +43,28 @@ test("external strategy-group dialers are preserved", () => {
 });
 
 test("filtering out a concrete dialer fails rather than silently breaking the chain", () => {
-    assert.throws(() => renameNodes([
-        { name: "Unknown" }, { name: "香港", "dialer-proxy": "Unknown" },
-    ]), /Filter removed dialer-proxy/);
+    assert.throws(
+        () => renameNodes([{ name: "Unknown" }, { name: "香港", "dialer-proxy": "Unknown" }]),
+        /Filter removed dialer-proxy/
+    );
 });
 
 test("duplicate source names are rejected only when a dialer refers to them", () => {
     assert.equal(renameNodes(named("香港", "香港")).length, 2);
-    assert.throws(() => renameNodes([
-        { name: "香港" }, { name: "香港" }, { name: "美国", "dialer-proxy": "香港" },
-    ]), /Ambiguous dialer-proxy/);
+    assert.throws(
+        () =>
+            renameNodes([
+                { name: "香港" },
+                { name: "香港" },
+                { name: "美国", "dialer-proxy": "香港" },
+            ]),
+        /Ambiguous dialer-proxy/
+    );
 });
 
 test("same-category multipliers preserve source order rather than sorting numerically", () => {
-    assert.deepEqual(renameNodes(named("法国 3x", "法国 2x"), { bl: true }).map((node) => node.name), ["法国 3× 01", "法国 2× 01"]);
+    assert.deepEqual(
+        renameNodes(named("法国 3x", "法国 2x"), { bl: true }).map((node) => node.name),
+        ["法国 3× 01", "法国 2× 01"]
+    );
 });

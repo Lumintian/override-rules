@@ -73,7 +73,9 @@ export function orderNodes<T>(
         else known.push({ item, meta });
     }
     const ordered = orderedBlocks(known, ({ meta }) => meta.country!, preferences.countries)
-        .flatMap((country) => orderedBlocks(country, ({ meta }) => meta.prefix, preferences.prefixes))
+        .flatMap((country) =>
+            orderedBlocks(country, ({ meta }) => meta.prefix, preferences.prefixes)
+        )
         .flatMap((prefix) =>
             orderedBlocks(prefix, ({ meta }) => meta.category, preferences.categories)
         )
@@ -125,7 +127,9 @@ export function numberNodes<T extends { name: string }>(
                 ? item.name
                 : `${item.name}${separator}${String(index).padStart(2, "0")}`;
         if (names.has(name)) {
-            throw new Error(`[override-rules] Duplicate generated name: ${name}; change sn or name`);
+            throw new Error(
+                `[override-rules] Duplicate generated name: ${name}; change sn or name`
+            );
         }
         names.add(name);
         return { ...item, name };

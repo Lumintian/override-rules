@@ -1,7 +1,13 @@
 import { countriesMeta } from "./constants";
 import type { ProxyNode } from "./types";
 import { describeName } from "../shared/display_name";
-import { classifyNode, hasSpecialTag, orderCountries, orderNodes, readMultiplier } from "../shared/node_order";
+import {
+    classifyNode,
+    hasSpecialTag,
+    orderCountries,
+    orderNodes,
+    readMultiplier,
+} from "../shared/node_order";
 import type { NodeOrderMeta } from "../shared/node_order";
 import { splitPrefix } from "../shared/regions";
 
@@ -20,7 +26,8 @@ export function describeProxyNode(node: ProxyNode): NodeOrderMeta {
     for (const { country, regex, exclude } of COUNTRY_MATCHERS) {
         const match = regex.exec(body);
         if (!match || exclude?.test(body)) continue;
-        const inferredPrefix = body.slice(0, match.index)
+        const inferredPrefix = body
+            .slice(0, match.index)
             .replace(/[\u{1F1E6}-\u{1F1FF}]/gu, "")
             .replace(/^[\s|_-]+|[\s|_-]+$/g, "");
         const labels = body.slice(match.index + match[0].length);
@@ -62,7 +69,8 @@ export function parseCountries(nodes: ProxyNode[]): Record<string, ProxyNode[]> 
     const countryNodes: Record<string, ProxyNode[]> = Object.create(null);
     for (const node of nodes) {
         const { country } = describeProxyNode(node);
-        if (country === null || !Object.prototype.hasOwnProperty.call(countriesMeta, country)) continue;
+        if (country === null || !Object.prototype.hasOwnProperty.call(countriesMeta, country))
+            continue;
         (countryNodes[country] ??= []).push(node);
     }
     return countryNodes;

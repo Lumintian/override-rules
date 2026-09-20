@@ -17,7 +17,12 @@ for (const regex of [false, true]) {
                     ...regionalNodes,
                     ...(landing ? [{ name: "美国 落地 0.3x", "dialer-proxy": "前置代理" }] : []),
                 ];
-                const orderedRegionalNodes = [regionalNodes[1], regionalNodes[2], regionalNodes[3], regionalNodes[0]];
+                const orderedRegionalNodes = [
+                    regionalNodes[1],
+                    regionalNodes[2],
+                    regionalNodes[3],
+                    regionalNodes[0],
+                ];
                 const expected = [...orderedRegionalNodes, ...proxies.slice(regionalNodes.length)];
                 const result = convert({ proxies }, { regex, grouptype: String(grouptype) });
 

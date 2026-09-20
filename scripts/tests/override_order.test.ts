@@ -23,14 +23,20 @@ const expected = ["A | 香港 01", "A | 香港 0.2× 01", "B | 香港 01", "B | 
 test("override orders the merged proxies, manual, country, extra and GLOBAL node candidates", () => {
     const before = structuredClone(input);
     const output = main(input, { threshold: "1", hk: "1", sg: "1" });
-    assert.deepEqual(output.proxies?.map((node) => node.name), expected);
+    assert.deepEqual(
+        output.proxies?.map((node) => node.name),
+        expected
+    );
     assert.deepEqual(group(output, "手动选择").proxies, expected);
     assert.deepEqual(group(output, "香港节点").proxies, expected.slice(0, 3));
     assert.deepEqual(group(output, "香港额外1").proxies, expected.slice(0, 3));
     assert.deepEqual(group(output, "新加坡额外1").proxies, [expected[3]]);
     const global = group(output, "GLOBAL");
     assert.equal(global["include-all"], undefined);
-    assert.deepEqual(global.proxies?.filter((name) => expected.includes(name)), expected);
+    assert.deepEqual(
+        global.proxies?.filter((name) => expected.includes(name)),
+        expected
+    );
     assert.deepEqual(input, before);
 });
 
@@ -46,20 +52,32 @@ test("front and landing candidate lists retain sorted order without changing dia
     const output = main(config, { threshold: "1" });
     assert.deepEqual(group(output, "落地节点").proxies, ["A | 香港 落地 01", "A | 美国 落地 01"]);
     const nodeNames = config.proxies!.map((node) => node.name);
-    assert.deepEqual(group(output, "前置代理").proxies?.filter((name) => nodeNames.includes(name)), ["A | 香港 01", "A | 新加坡 01"]);
+    assert.deepEqual(
+        group(output, "前置代理").proxies?.filter((name) => nodeNames.includes(name)),
+        ["A | 香港 01", "A | 新加坡 01"]
+    );
     for (const node of output.proxies!) assert.ok(config.proxies!.includes(node));
 });
 
 test("all generated explicit references remain valid and STABLE membership is retained", () => {
     const output = main(input, { threshold: "1", hk: "2" });
-    const valid = new Set(["DIRECT", "REJECT", "REJECT-DROP", ...expected, ...output["proxy-groups"]!.map((g) => g.name)]);
+    const valid = new Set([
+        "DIRECT",
+        "REJECT",
+        "REJECT-DROP",
+        ...expected,
+        ...output["proxy-groups"]!.map((g) => g.name),
+    ]);
     for (const g of output["proxy-groups"]!) {
         for (const name of g.proxies ?? []) {
             assert.ok(valid.has(name), `${g.name}: ${name}`);
             assert.notEqual(g.name, name);
         }
     }
-    assert.deepEqual(group(output, "稳定代理").proxies, ["选择代理", ...group(output, "选择代理").proxies!]);
+    assert.deepEqual(group(output, "稳定代理").proxies, [
+        "选择代理",
+        ...group(output, "选择代理").proxies!,
+    ]);
 });
 
 test("per-call arguments do not leak and regex groups remain explicitly dynamic", () => {
@@ -76,8 +94,12 @@ test("hosts, inherited DNS and infrastructure options survive ordering unchanged
         ...input,
         hosts: { "service.lan": "192.0.2.10" },
         dns: {
-            enable: true, ipv6: false, "prefer-h3": false,
-            "enhanced-mode": "fake-ip", nameserver: [], fallback: [],
+            enable: true,
+            ipv6: false,
+            "prefer-h3": false,
+            "enhanced-mode": "fake-ip",
+            nameserver: [],
+            fallback: [],
             "nameserver-policy": { "+.example.test": "192.0.2.53" },
             "fake-ip-filter": ["+.example.test"],
         },

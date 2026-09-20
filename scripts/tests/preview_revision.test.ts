@@ -7,7 +7,8 @@ import { sourceRevision } from "../preview/revision";
 
 function fixture(): string {
     const root = mkdtempSync(path.join(tmpdir(), "ordering-revision-"));
-    for (const dir of ["src", "shared", "scripts/substore"]) mkdirSync(path.join(root, dir), { recursive: true });
+    for (const dir of ["src", "shared", "scripts/substore"])
+        mkdirSync(path.join(root, dir), { recursive: true });
     writeFileSync(path.join(root, "src/main.ts"), "export const main = 1;");
     writeFileSync(path.join(root, "shared/preferences.ts"), "export const hk = 10;");
     writeFileSync(path.join(root, "scripts/substore/rename.ts"), "export const rename = 1;");

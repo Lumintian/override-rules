@@ -10,7 +10,13 @@
  * 完整 MIT 许可证及来源说明见 scripts/substore/LICENSE 与 README.md。
  */
 
-import { classifyNode, hasSpecialTag, numberNodes, orderNodes, readMultiplier } from "../../shared/node_order";
+import {
+    classifyNode,
+    hasSpecialTag,
+    numberNodes,
+    orderNodes,
+    readMultiplier,
+} from "../../shared/node_order";
 import { rewriteDialerReferences } from "../../shared/node_references";
 import type { NodeOrderMeta } from "../../shared/node_order";
 import { FG, findRegion, regionNames, splitPrefix } from "../../shared/regions";
@@ -41,13 +47,22 @@ interface RenameProxy {
 declare const $arguments: RenameArgs;
 
 const formats: Record<string, NameFormat> = {
-    cn: "cn", zh: "cn", us: "us", en: "us", quan: "quan", gq: "gq", flag: "gq",
+    cn: "cn",
+    zh: "cn",
+    us: "us",
+    en: "us",
+    quan: "quan",
+    gq: "gq",
+    flag: "gq",
 };
 
 // Only information markers: "备用", "测试" and "群岛" can be real node names.
-const informationName = /剩余|已用|套餐|到期|有效期|下次重置|重置时间|官网|官址|官方网站|订阅地址|联系客服|工单|(?:^|\b)(?:USED|TOTAL|EXPIRE|EMAIL)(?:\b|$)|^流量\s*[:：]/i;
-const keya = /港|Hong|HK|新加坡|SG|Singapore|日本|Japan|JP|美国|United States|US|韩|土耳其|TR|Turkey|Korea|KR|🇸🇬|🇭🇰|🇯🇵|🇺🇸|🇰🇷|🇹🇷/i;
-const keyb = /(((1|2|3|4)\d)|(香港|Hong|HK) 0[5-9]|((新加坡|SG|Singapore|日本|Japan|JP|美国|United States|US|韩|土耳其|TR|Turkey|Korea|KR) 0[3-9]))/i;
+const informationName =
+    /剩余|已用|套餐|到期|有效期|下次重置|重置时间|官网|官址|官方网站|订阅地址|联系客服|工单|(?:^|\b)(?:USED|TOTAL|EXPIRE|EMAIL)(?:\b|$)|^流量\s*[:：]/i;
+const keya =
+    /港|Hong|HK|新加坡|SG|Singapore|日本|Japan|JP|美国|United States|US|韩|土耳其|TR|Turkey|Korea|KR|🇸🇬|🇭🇰|🇯🇵|🇺🇸|🇰🇷|🇹🇷/i;
+const keyb =
+    /(((1|2|3|4)\d)|(香港|Hong|HK) 0[5-9]|((新加坡|SG|Singapore|日本|Japan|JP|美国|United States|US|韩|土耳其|TR|Turkey|Korea|KR) 0[3-9]))/i;
 
 // Preserve the existing alias coverage; replace directly to avoid stateful /g.test().
 const aliases: Record<string, RegExp> = {
@@ -89,16 +104,33 @@ const aliases: Record<string, RegExp> = {
 };
 
 const fixedTags: Array<[RegExp, string]> = [
-    [/\bIPLC\b/i, "IPLC"], [/\bIEPL\b/i, "IEPL"], [/核心|\bKern\b/i, "Kern"],
-    [/边缘|\bEdge\b/i, "Edge"], [/高级|\bPro\b/i, "Pro"], [/标准|\bStd\b/i, "Std"], [/实验|\bExp\b/i, "Exp"],
-    [/商宽|\bBiz\b/i, "Biz"], [/家宽|\bFam\b/i, "Fam"], [/游戏|\bgame\b/i, "Game"],
-    [/购物|\bBuy\b/i, "Buy"], [/专线|\bZx\b/i, "Zx"], [/\bLB\b/, "LB"], [/cloudflare|\bCF\b/i, "CF"],
-    [/\budp\b/i, "UDP"], [/\bgpt\b/i, "GPT"], [/\budpn\b/i, "UDPN"],
-    [/自建|\bself\b/i, "自建"], [/落地|\blanding\b/i, "落地"],
+    [/\bIPLC\b/i, "IPLC"],
+    [/\bIEPL\b/i, "IEPL"],
+    [/核心|\bKern\b/i, "Kern"],
+    [/边缘|\bEdge\b/i, "Edge"],
+    [/高级|\bPro\b/i, "Pro"],
+    [/标准|\bStd\b/i, "Std"],
+    [/实验|\bExp\b/i, "Exp"],
+    [/商宽|\bBiz\b/i, "Biz"],
+    [/家宽|\bFam\b/i, "Fam"],
+    [/游戏|\bgame\b/i, "Game"],
+    [/购物|\bBuy\b/i, "Buy"],
+    [/专线|\bZx\b/i, "Zx"],
+    [/\bLB\b/, "LB"],
+    [/cloudflare|\bCF\b/i, "CF"],
+    [/\budp\b/i, "UDP"],
+    [/\bgpt\b/i, "GPT"],
+    [/\budpn\b/i, "UDPN"],
+    [/自建|\bself\b/i, "自建"],
+    [/落地|\blanding\b/i, "落地"],
 ];
 
 function enabled(value: string | boolean | undefined): boolean {
-    return value === true || value === "" || (typeof value === "string" && /^(true|1|on)$/i.test(value));
+    return (
+        value === true ||
+        value === "" ||
+        (typeof value === "string" && /^(true|1|on)$/i.test(value))
+    );
 }
 
 function text(value: string | boolean | undefined, fallback = ""): string {
@@ -111,11 +143,14 @@ function text(value: string | boolean | undefined, fallback = ""): string {
 }
 
 function customTags(name: string, expression: string): string[] {
-    return expression.split("+").flatMap((rule) => {
-        const [match, ...replacement] = rule.split(">");
-        if (!match || !name.includes(match)) return [];
-        return [replacement.length ? replacement.join(">") : match];
-    }).filter(Boolean);
+    return expression
+        .split("+")
+        .flatMap((rule) => {
+            const [match, ...replacement] = rule.split(">");
+            if (!match || !name.includes(match)) return [];
+            return [replacement.length ? replacement.join(">") : match];
+        })
+        .filter(Boolean);
 }
 
 export function renameNodes(proxies: readonly RenameProxy[], args: RenameArgs = {}): RenameProxy[] {
@@ -156,16 +191,23 @@ export function renameNodes(proxies: readonly RenameProxy[], args: RenameArgs = 
 
         if (region) {
             const labels = customTags(rawName, text(args.blkey));
-            if ((enabled(args.bl) || (enabled(args.blgd) && /ˣ/.test(rawName))) && multiplier !== null && multiplier !== 1) {
+            if (
+                (enabled(args.bl) || (enabled(args.blgd) && /ˣ/.test(rawName))) &&
+                multiplier !== null &&
+                multiplier !== 1
+            ) {
                 labels.push(`${multiplier}×`);
             }
             if (enabled(args.blgd)) {
-                labels.push(...fixedTags.filter(([regex]) => regex.test(rawName)).map(([, label]) => label));
+                labels.push(
+                    ...fixedTags.filter(([regex]) => regex.test(rawName)).map(([, label]) => label)
+                );
             }
             const flag = enabled(args.flag) && output !== "gq" ? FG[region.regionIndex] : "";
             const leading = enabled(args.nf) ? [nodePrefix, flag] : [flag, nodePrefix];
             proxy.name = [...leading, regionNames[output][region.regionIndex], ...new Set(labels)]
-                .filter(Boolean).join(separator);
+                .filter(Boolean)
+                .join(separator);
         } else {
             proxy.name = [nodePrefix, rawName].filter(Boolean).join(separator);
         }
@@ -174,11 +216,16 @@ export function renameNodes(proxies: readonly RenameProxy[], args: RenameArgs = 
 
     let ordered = orderNodes(entries, ({ meta }) => meta);
     if (enabled(args.key)) {
-        const numbered = numberNodes(ordered.map(({ proxy }) => proxy), text(args.sn, " "));
+        const numbered = numberNodes(
+            ordered.map(({ proxy }) => proxy),
+            text(args.sn, " ")
+        );
         ordered = ordered.filter((_, index) => !keyb.test(numbered[index].name));
     }
     const numbered = numberNodes(
-        ordered.map(({ proxy }) => proxy), text(args.sn, " "), enabled(args.one)
+        ordered.map(({ proxy }) => proxy),
+        text(args.sn, " "),
+        enabled(args.one)
     );
     return rewriteDialerReferences(
         proxies,

@@ -7,7 +7,8 @@ export function describeName(name: string): NodeOrderMeta {
     const { prefix, body } = splitPrefix(name);
     const match = findRegion(body);
     if (!match) return { country: null, prefix, category: "standard" };
-    const inferredPrefix = body.slice(0, match.index)
+    const inferredPrefix = body
+        .slice(0, match.index)
         .replace(/[\u{1F1E6}-\u{1F1FF}]/gu, "")
         .replace(/^[\s|_-]+|[\s|_-]+$/g, "");
     const labels = body.slice(match.index + match.text.length);

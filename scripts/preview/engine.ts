@@ -66,8 +66,11 @@ export function resolveMembers(config: ClashConfig, warnings: string[]): Record<
 export class PreviewEngine {
     private compiled?: Promise<CompiledSources>;
     private compiledRevision = "";
+    private readonly root: string;
 
-    constructor(private readonly root: string) {}
+    constructor(root: string) {
+        this.root = root;
+    }
 
     revision(): string {
         return sourceRevision(this.root);

@@ -10,18 +10,15 @@ const tsRecommended = tseslint.configs.recommended.map((config) => ({
 export default [
     // 全局忽略
     {
-        ignores: [
-            "dist/**",
-            "node_modules/**",
-        ],
+        ignores: ["dist/**", "node_modules/**"],
     },
 
     // 主规则：应用于所有 JS 文件
     {
-        files: ["**/*.js"],
+        files: ["**/*.{js,mjs}"],
         languageOptions: {
             ecmaVersion: 2026,
-            sourceType: "commonjs",
+            sourceType: "module",
             globals: {
                 // Node.js 全局变量
                 require: "readonly",

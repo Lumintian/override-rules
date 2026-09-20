@@ -71,7 +71,7 @@ flowchart TD
 | 输入 | — | 上游订阅传入的代理节点列表 (`config.proxies`) 与用户提供的 URL 覆写参数 (`$arguments`) |
 | 参数解析 | `src/args.ts` | 将原始字符串参数转换为类型安全的 `FeatureFlags` 对象，设置各项开关的默认值 |
 | 节点分类 | `src/node_parser.ts` | 识别落地/非落地 (`parseNodesByLanding`)、所属国家/地区 (`parseCountries`) 和 Tailscale 节点 (`parseTailscale`)；提取活跃国家名称 (`getActiveCountryNames`) |
-| 配置构建 | `src/selectors.ts` + `src/proxy_groups.ts` | 先生成基础及额外地区组 (`buildCountryGroups`)，据此生成基础代理选择列表 (`BaseLists`)，最后组装完整的代理组定义 |
+| 配置构建 | `src/selectors.ts` + `src/proxy_groups.ts` | 先生成基础及额外地区组 (`buildCountryGroups`)，据此生成基础代理选择列表 (`BaseLists`)，最后组装地区组、金融服务组及其他完整代理组定义 |
 | 最终组装 | `src/main.ts` | 将代理组、路由规则 (`buildRules`)、DNS 配置 (`buildDns`) 与 TUN 配置 (`buildTunConfig`) 拼装为最终输出的 `ClashConfig` |
 
 ---
@@ -84,7 +84,7 @@ flowchart TD
 | `src/constants.ts` | 常量集中管理（国家元数据、代理组名称、CDN 地址等） | `countriesMeta`, `NODE_SUFFIX`, `PROXY_GROUPS` |
 | `src/node_parser.ts` | 多维度节点分类与过滤 | `parseNodesByLanding()`, `parseCountries()`, `parseTailscale()`, `getActiveCountryNames()` |
 | `src/selectors.ts` | 代理选择列表构建（各策略组的基础选项列表） | `buildBaseLists()` |
-| `src/proxy_groups.ts` | 代理组定义生成（含基础及额外地区组） | `buildCountryGroups()`, `buildProxyGroups()`, `buildGroupByType()` |
+| `src/proxy_groups.ts` | 代理组定义生成（含基础及额外地区组、金融服务组） | `buildCountryGroups()`, `buildProxyGroups()`, `buildGroupByType()` |
 | `src/rules.ts` | 路由规则构建 | `buildRules()` |
 | `src/dns.ts` | DNS 配置构建 | `buildDns()`, `snifferConfig` |
 | `src/tun.ts` | TUN 模式配置构建 | `buildTunConfig()` |

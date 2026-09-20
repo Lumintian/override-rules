@@ -74,14 +74,6 @@ export const ruleProviders: Record<string, RuleProvider> = {
         url: `${CDN_URL}/gh/Lumintian/override-rules@main/ruleset/AdditionalCDNResources.list`,
         path: "./ruleset/AdditionalCDNResources.list",
     },
-    Crypto: {
-        type: "http",
-        behavior: "classical",
-        format: "text",
-        interval: 86400,
-        url: `${CDN_URL}/gh/Lumintian/override-rules@main/ruleset/Crypto.list`,
-        path: "./ruleset/Crypto.list",
-    },
     GFWList: {
         type: "http",
         behavior: "domain",

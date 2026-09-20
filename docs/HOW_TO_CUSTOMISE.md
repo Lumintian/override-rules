@@ -14,6 +14,8 @@ npm install
 
 我们使用 TypeScript 进行源码管理。Mihomo 覆写逻辑位于 `src/`，Sub-Store 节点重命名逻辑位于 `scripts/substore/rename.ts`。**请务必不要直接修改根目录下的 `.js` 和 `.yaml` 产物文件**。
 
+类型检查由 TypeScript 7 原生编译器执行（`npm run typecheck`）；`devDependencies` 中的 `typescript` 6 仅作为 `typescript-eslint` 的运行时（该插件尚不兼容 TypeScript 7 的 API），不参与项目类型检查。构建阶段由 esbuild 完成 TypeScript 的类型擦除和打包，YAML 生成器由 `tsx` 执行。
+
 ## 自定义默认的脚本参数
 
 通过 URL 传递参数（如 `#fakeip=true`）是控制脚本行为的常用方式。如果你希望修改这些参数的默认值（例如，默认开启 IPv6 支持），可以修改 `src/args.ts` 中的 `buildFeatureFlags` 函数，为其解析函数补充或修改默认值参数：
@@ -184,5 +186,3 @@ https://cdn.jsdelivr.net/gh/你的用户名/override-rules@dist/convert.min.js
 ```text
 https://raw.githubusercontent.com/你的用户名/override-rules/refs/heads/dist/convert.min.js
 ```
-
-

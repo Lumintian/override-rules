@@ -14,8 +14,16 @@ test("legacy display labels share the same country identity at every boundary", 
     }
     const countries = { 马来西亚: 5, 香港: 10 };
     const input = ["香港 01", "马来 01", "Malaysia 02"];
-    assert.deepEqual(orderNodes(input, describeName, {
-        countries, prefixes: {}, categories: categoryWeights,
-    }), ["马来 01", "Malaysia 02", "香港 01"]);
-    assert.deepEqual(orderCountries(["香港", "马来西亚"], (name) => name, countries), ["马来西亚", "香港"]);
+    assert.deepEqual(
+        orderNodes(input, describeName, {
+            countries,
+            prefixes: {},
+            categories: categoryWeights,
+        }),
+        ["马来 01", "Malaysia 02", "香港 01"]
+    );
+    assert.deepEqual(
+        orderCountries(["香港", "马来西亚"], (name) => name, countries),
+        ["马来西亚", "香港"]
+    );
 });
