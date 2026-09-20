@@ -11,7 +11,7 @@ https://github.com/Lumintian/override-rules
 - keepalive: 启用 tcp-keep-alive（默认 false）
 - fakeip: DNS 使用 FakeIP 模式（默认 true；传 false 时为 RedirHost）
 - quic: 允许 QUIC 流量（UDP 443，默认 false）
-- threshold: 地区节点数量小于该值时不显示基础地区组；已生成基础组的地区不再重复列入手动选择 (默认 2，不影响额外组)
+- threshold: 地区节点数量小于该值时不显示基础地区组；已生成基础或额外组的地区不再重复列入手动选择 (默认 2，不影响额外组)
 - regex: 使用正则过滤模式（include-all + filter）写入基础及额外地区组，而非直接枚举节点名称（默认 false）
 - hk/mo/tw/sg/jp/kr/us/ca/uk/au/de/fr/ru/th/in/my/ar/fi/eg/ph/tr/ua: 对应地区额外 select 组数量（0–100 的整数，默认 0；非法值视为 0），如 us=2&sg=1；无对应地区节点时不生成
 
@@ -83,11 +83,14 @@ export function main(config: ClashConfig, args: ScriptArgs = getRawArgs()): Clas
         countryExtraCounts,
     });
     const allNodes = proxies.map((node) => node.name);
-    const groupedCountries = new Set(countryNames);
+    const representedCountries = new Set([
+        ...countryNames,
+        ...Object.keys(countryNodes).filter((country) => (countryExtraCounts[country] ?? 0) > 0),
+    ]);
     const manualNodes = proxies
         .filter((node) => {
             const country = describeProxyNode(node).country;
-            return country === null || !groupedCountries.has(country);
+            return country === null || !representedCountries.has(country);
         })
         .map((node) => node.name);
     const tailscaleNodes = parseTailscale(proxies);
