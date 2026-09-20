@@ -87,7 +87,7 @@ export function buildProxyGroups({ /* 参数 */ }): ProxyGroup[] {
 
 ## 调整国家/地区匹配规则
 
-脚本会根据 `countriesMeta` 自动生成实际存在的代理组。调整匹配规则时修改元数据即可；新增地区时，还需在 `src/types.ts` 的 `CountryCode` 中加入对应参数代码，并同步 README 的参数表。
+脚本会根据 `countriesMeta` 自动生成实际存在的代理组。达到 `threshold` 并生成基础地区组后，该地区节点不会再重复出现在 `手动选择`；低于阈值或未识别地区的节点仍会保留，没有剩余候选节点时不会生成空的 `手动选择` 组。调整匹配规则时修改元数据即可；新增地区时，还需在 `src/types.ts` 的 `CountryCode` 中加入对应参数代码，并同步 README 的参数表。
 
 在 `src/constants.ts` 的 `countriesMeta` 中，你可以修改节点的正则匹配 `pattern` 以及代理组显示的 `icon`。`weight` 用于控制代理组在列表中的排序（越小越靠前），`code` 是额外手动组数量的参数名，例如 `us=2`。基础组和额外组由 `src/proxy_groups.ts` 的 `buildCountryGroups()` 统一构建。
 

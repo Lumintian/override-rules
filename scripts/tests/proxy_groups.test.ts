@@ -27,10 +27,10 @@ for (const regex of [false, true]) {
                 const result = convert({ proxies }, { regex, grouptype: String(grouptype) });
 
                 assert.deepEqual(result.proxies, expected);
-                assert.deepEqual(
-                    getGroup(result, "手动选择").proxies,
-                    expected.map((node) => node.name)
+                const manualGroup = result["proxy-groups"]?.find(
+                    (group) => group.name === "手动选择"
                 );
+                assert.equal(manualGroup, undefined);
                 assert.ok(!result["proxy-groups"]?.some((group) => group.name === "低倍率节点"));
                 assert.ok(
                     result["proxy-groups"]?.every((group) => !group.proxies?.includes("低倍率节点"))

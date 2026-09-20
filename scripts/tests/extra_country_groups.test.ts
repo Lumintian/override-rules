@@ -115,6 +115,7 @@ for (const regex of [false, true]) {
         );
         assert.deepEqual(extraNames(result), ["美国额外1", "美国额外2"]);
         assert.ok(!result["proxy-groups"]?.some((group) => group.name === "美国节点"));
+        assert.deepEqual(getGroup(result, "手动选择").proxies, ["美国 A"]);
         assertValidReferences(result);
         for (const nodes of [[], [{ name: "未知节点" }], [{ name: "美属 A" }]]) {
             assert.deepEqual(extraNames(convert({ proxies: nodes }, { regex, us: "2" })), []);
@@ -167,7 +168,6 @@ for (const regex of [false, true]) {
             "台湾额外1",
             "台湾额外2",
             "选择代理",
-            "手动选择",
             "DIRECT",
         ]);
         assertValidReferences(result);

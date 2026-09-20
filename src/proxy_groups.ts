@@ -103,7 +103,7 @@ export function buildCountryGroups({
  * @returns 代理组配置数组
  */
 export function buildProxyGroups({
-    allNodes,
+    manualNodes,
     countryNames,
     countryGroups,
     tailscaleNodes,
@@ -131,12 +131,14 @@ export function buildProxyGroups({
             type: "select",
             proxies: defaultSelector,
         },
-        {
-            name: PROXY_GROUPS.MANUAL,
-            icon: `${CDN_URL}/gh/shindgewongxj/WHATSINStash@master/icon/select.png`,
-            type: "select",
-            proxies: allNodes,
-        },
+        manualNodes.length > 0
+            ? {
+                  name: PROXY_GROUPS.MANUAL,
+                  icon: `${CDN_URL}/gh/shindgewongxj/WHATSINStash@master/icon/select.png`,
+                  type: "select",
+                  proxies: manualNodes,
+              }
+            : null,
         {
             name: PROXY_GROUPS.STABLE,
             icon: `${CDN_URL}/gh/Koolson/Qure@master/IconSet/Color/Available.png`,
@@ -245,7 +247,12 @@ export function buildProxyGroups({
             icon: `${CDN_URL}/gh/Koolson/Qure@master/IconSet/Color/Bahamut.png`,
             type: "select",
             proxies: hasTW
-                ? [...countryGroupNames("台湾"), PROXY_GROUPS.SELECT, PROXY_GROUPS.MANUAL, "DIRECT"]
+                ? [
+                      ...countryGroupNames("台湾"),
+                      PROXY_GROUPS.SELECT,
+                      ...(manualNodes.length > 0 ? [PROXY_GROUPS.MANUAL] : []),
+                      "DIRECT",
+                  ]
                 : defaultProxies,
         },
         {

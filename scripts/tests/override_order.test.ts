@@ -27,7 +27,7 @@ test("override orders the merged proxies, manual, country, extra and GLOBAL node
         output.proxies?.map((node) => node.name),
         expected
     );
-    assert.deepEqual(group(output, "手动选择").proxies, expected);
+    assert.ok(!output["proxy-groups"]?.some((item) => item.name === "手动选择"));
     assert.deepEqual(group(output, "香港节点").proxies, expected.slice(0, 3));
     assert.deepEqual(group(output, "香港额外1").proxies, expected.slice(0, 3));
     assert.deepEqual(group(output, "新加坡额外1").proxies, [expected[3]]);
@@ -86,7 +86,7 @@ test("per-call arguments do not leak and regex groups remain explicitly dynamic"
     const output = main(input, { regex: "true", hk: "1" });
     assert.equal(group(output, "香港节点")["include-all"], true);
     assert.equal(group(output, "香港额外1").proxies, undefined);
-    assert.deepEqual(group(output, "手动选择").proxies, expected);
+    assert.deepEqual(group(output, "手动选择").proxies, expected.slice(3));
 });
 
 test("hosts, inherited DNS and infrastructure options survive ordering unchanged", () => {

@@ -32,7 +32,6 @@ for (const regex of [false, true]) {
                         "香港节点",
                         "美国节点",
                         ...(extra ? ["美国额外1", "美国额外2"] : []),
-                        "手动选择",
                         "DIRECT",
                     ]);
                     for (const country of ["香港", "美国"]) {
@@ -51,10 +50,14 @@ for (const regex of [false, true]) {
                         assert.equal(getGroup(result, "美国额外1").type, "select");
                         assert.equal(getGroup(result, "美国额外2").type, "select");
                     }
+                    const manualGroup = result["proxy-groups"]?.find(
+                        (group) => group.name === "手动选择"
+                    );
+                    assert.equal(manualGroup, undefined);
                     const groupNames = result["proxy-groups"]!.map((group) => group.name);
                     assert.equal(
                         groupNames.indexOf("稳定代理"),
-                        groupNames.indexOf("手动选择") + 1
+                        groupNames.indexOf("选择代理") + 1
                     );
                     assert.equal(
                         groupNames.indexOf("漏网之鱼"),
@@ -67,7 +70,6 @@ for (const regex of [false, true]) {
                         "香港节点",
                         "美国节点",
                         ...(extra ? ["美国额外1", "美国额外2"] : []),
-                        "手动选择",
                         "DIRECT",
                     ]);
                     assert.deepEqual(getGroup(result, "漏网之鱼").proxies, [
@@ -76,7 +78,6 @@ for (const regex of [false, true]) {
                         "香港节点",
                         "美国节点",
                         ...(extra ? ["美国额外1", "美国额外2"] : []),
-                        "手动选择",
                         "DIRECT",
                     ]);
                     assertValidReferences(result);
@@ -85,10 +86,10 @@ for (const regex of [false, true]) {
         }
     }
 
-    test(`manual selection remains available without regional groups (regex=${regex})`, () => {
-        const result = convert({ proxies: [{ name: "未知节点" }] }, { regex });
+    test(`manual selection keeps nodes whose regions stay below threshold (regex=${regex})`, () => {
+        const result = convert({ proxies: [{ name: "美国 A" }, { name: "未知节点" }] }, { regex });
         assert.deepEqual(getGroup(result, "选择代理").proxies, ["手动选择", "DIRECT"]);
-        assert.deepEqual(getGroup(result, "手动选择").proxies, ["未知节点"]);
+        assert.deepEqual(getGroup(result, "手动选择").proxies, ["美国 A", "未知节点"]);
         const groupNames = result["proxy-groups"]!.map((group) => group.name);
         assert.equal(groupNames.indexOf("稳定代理"), groupNames.indexOf("手动选择") + 1);
         assert.equal(groupNames.indexOf("漏网之鱼"), groupNames.indexOf("稳定代理") + 1);

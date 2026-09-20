@@ -9,6 +9,7 @@ import type { BaseLists, BuildBaseListsInput } from "./types";
  * @param input.countryGroups - 已构建的基础地区组和额外地区组
  * @param input.nonLandingNodes - 非落地节点名称列表（仅在非正则过滤模式下使用）
  * @param input.regexFilter - 是否使用正则过滤模式
+ * @param input.hasManualNodes - 是否存在未被基础地区组覆盖的手动候选节点
  * @returns 包含各场景下代理列表的 `BaseLists` 对象
  */
 export function buildBaseLists({
@@ -16,13 +17,14 @@ export function buildBaseLists({
     countryGroups,
     nonLandingNodes,
     regexFilter,
+    hasManualNodes,
 }: BuildBaseListsInput): BaseLists {
     const countryGroupNames = countryGroups.map((group) => group.name);
 
     const defaultSelector = buildList(
         landing && PROXY_GROUPS.LANDING,
         countryGroupNames,
-        PROXY_GROUPS.MANUAL,
+        hasManualNodes && PROXY_GROUPS.MANUAL,
         "DIRECT"
     );
 
@@ -30,7 +32,7 @@ export function buildBaseLists({
         PROXY_GROUPS.SELECT,
         landing && PROXY_GROUPS.LANDING,
         countryGroupNames,
-        PROXY_GROUPS.MANUAL,
+        hasManualNodes && PROXY_GROUPS.MANUAL,
         "DIRECT"
     );
 
@@ -39,7 +41,7 @@ export function buildBaseLists({
         landing && PROXY_GROUPS.LANDING,
         countryGroupNames,
         PROXY_GROUPS.SELECT,
-        PROXY_GROUPS.MANUAL
+        hasManualNodes && PROXY_GROUPS.MANUAL
     );
 
     const frontProxySelector = buildList(

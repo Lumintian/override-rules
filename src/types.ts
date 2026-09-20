@@ -219,6 +219,7 @@ export interface BuildBaseListsInput {
     countryGroups: ProxyGroup[];
     nonLandingNodes: ProxyNode[];
     regexFilter: boolean;
+    hasManualNodes: boolean;
 }
 
 export interface BuildCountryGroupsInput {
@@ -230,7 +231,7 @@ export interface BuildCountryGroupsInput {
 }
 
 export interface BuildProxyGroupsInput {
-    allNodes: string[];
+    manualNodes: string[];
     countryNames: string[];
     countryGroups: ProxyGroup[];
     landing: boolean;

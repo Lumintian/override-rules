@@ -440,5 +440,10 @@ test("shared weights hot-reload into preview node and group order", async (t) =>
         after.config.proxies!.map((node) => node.name),
         ["新加坡 A", "香港 A"]
     );
-    assert.deepEqual(getGroup(after.config, "手动选择").proxies, ["新加坡 A", "香港 A"]);
+    assert.ok(!after.config["proxy-groups"]?.some((group) => group.name === "手动选择"));
+    assert.deepEqual(getGroup(after.config, "选择代理").proxies, [
+        "新加坡节点",
+        "香港节点",
+        "DIRECT",
+    ]);
 });

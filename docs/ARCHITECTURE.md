@@ -130,7 +130,7 @@ flowchart TD
 
 `countriesMeta.code` 定义各地区的数量参数名，例如 `us`、`sg`；类型范围由 `CountryCode` 维护。`buildFeatureFlags()` 将参数解析为以地区名称为键的 `countryExtraCounts`。数量只接受 `0–100` 的整数，缺省或非法值为 `0`。
 
-`buildCountryGroups()` 按地区权重遍历至少有一个候选节点的地区：基础组遵循 `countryThreshold` 和 `groupType`，额外组按显式数量生成，固定为 `select`，名称为「地区额外1」「地区额外2」等。无该地区节点时不生成空组。两类组均遵循 `regexFilter`，所以正则模式也保留运行时独立匹配及不按 `dialer-proxy` 排除成员的现有行为。
+`buildCountryGroups()` 按地区权重遍历至少有一个候选节点的地区：基础组遵循 `countryThreshold` 和 `groupType`，额外组按显式数量生成，固定为 `select`，名称为「地区额外1」「地区额外2」等。无该地区节点时不生成空组。达到阈值并生成基础组的地区节点不再重复加入 `手动选择`；低于阈值、未识别地区的节点仍保留，没有剩余候选节点时不生成空的 `手动选择` 组，单独生成额外组不会触发去重。两类组均遵循 `regexFilter`，所以正则模式也保留运行时独立匹配及不按 `dialer-proxy` 排除成员的现有行为。
 
 基础地区组和额外组直接加入 `选择代理`、服务列表和前置代理列表。不再生成跨地区的 `自动选择` / `故障转移` 组，也不再构建它们的候选列表；基础地区组自身的测速和负载均衡仍遵循 `groupType`。
 
