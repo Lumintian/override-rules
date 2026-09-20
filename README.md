@@ -23,7 +23,7 @@
 推荐通过 **Sub-Store** 使用 JavaScript 动态覆写：
 
 ```text
-https://cdn.jsdelivr.net/gh/Lumintian/override-rules/convert.min.js
+https://cdn.jsdelivr.net/gh/Lumintian/override-rules@dist/convert.min.js
 ```
 
 在 Sub-Store 的脚本操作中加入上述脚本即可。
@@ -31,7 +31,7 @@ https://cdn.jsdelivr.net/gh/Lumintian/override-rules/convert.min.js
 脚本支持通过 URL Fragment 传入参数，例如：
 
 ```text
-https://cdn.jsdelivr.net/gh/Lumintian/override-rules/convert.min.js#grouptype=1&fakeip=true
+https://cdn.jsdelivr.net/gh/Lumintian/override-rules@dist/convert.min.js#grouptype=1&fakeip=true
 ```
 
 > [!TIP]
@@ -60,7 +60,7 @@ https://cdn.jsdelivr.net/gh/Lumintian/override-rules/convert.min.js#grouptype=1&
 使用小写地区代码作为参数名，以数量为参数值。例如：
 
 ```text
-https://cdn.jsdelivr.net/gh/Lumintian/override-rules/convert.min.js#grouptype=1&us=2&sg=1
+https://cdn.jsdelivr.net/gh/Lumintian/override-rules@dist/convert.min.js#grouptype=1&us=2&sg=1
 ```
 
 当订阅中存在对应地区的候选节点时，将生成 `美国额外1`、`美国额外2`、`新加坡额外1`。这些组全部固定为 `select`，每组都包含对应地区的候选节点，可以分别手动选择不同节点，供不同服务使用；不是对地区节点进行分片，也不是只引用原有的 `美国节点` 等基础组。
@@ -241,7 +241,7 @@ proxies:
 可以使用动态 JavaScript 覆写：
 
 ```text
-https://cdn.jsdelivr.net/gh/Lumintian/override-rules/convert.min.js
+https://cdn.jsdelivr.net/gh/Lumintian/override-rules@dist/convert.min.js
 ```
 
 但部分客户端不支持向脚本传递参数；需要参数化配置时优先使用 Sub-Store。
@@ -286,7 +286,7 @@ config_gt-{0|1|2}_ipv6-{0|1}_full-{0|1}_keepalive-{0|1}_fakeip-{0|1}_quic-{0|1}_
 例如：
 
 ```text
-https://cdn.jsdelivr.net/gh/Lumintian/override-rules/yamls/config_gt-0_ipv6-0_full-1_keepalive-0_fakeip-0_quic-0_tun-0.yaml
+https://cdn.jsdelivr.net/gh/Lumintian/override-rules@dist/yamls/config_gt-0_ipv6-0_full-1_keepalive-0_fakeip-0_quic-0_tun-0.yaml
 ```
 
 固定版本：
