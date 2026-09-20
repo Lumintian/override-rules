@@ -72,6 +72,7 @@ https://cdn.jsdelivr.net/gh/Lumintian/override-rules@dist/sort.min.js
 | `fgf=` | 名称字段分隔符，默认空格 |
 | `sn=` | baseName 与序号的分隔符，默认空格 |
 | `clear` | 清理套餐、到期、剩余流量、官网等明确的信息节点 |
+| `chain` | 按原名称中的“中转”或“中转A..Z”写入 `dialer-proxy: 前置代理` 或对应字母组；已有不同引用时明确报错 |
 | `blpx` | 已无须传入；新排序始终执行，此参数不再控制排序 |
 | `blockquic=on/off` | 显式设置 block-quic；不传时保留原字段 |
 

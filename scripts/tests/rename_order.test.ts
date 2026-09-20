@@ -110,6 +110,23 @@ test("unknown countries are optional, last and stable; information nodes are rem
     ]);
 });
 
+test("chain tags assign distinct dialer groups without overwriting conflicts", () => {
+    const output = renameNodes(
+        [{ name: "美国 落地 中转" }, { name: "德国 落地 中转A" }, { name: "日本 普通" }],
+        { chain: true, blgd: true }
+    );
+    assert.equal(output.find((node) => node.name.includes("美国"))?.["dialer-proxy"], "前置代理");
+    assert.equal(output.find((node) => node.name.includes("德国"))?.["dialer-proxy"], "前置代理A");
+    assert.equal(output.find((node) => node.name.includes("日本"))?.["dialer-proxy"], undefined);
+    assert.throws(
+        () =>
+            renameNodes([{ name: "美国 落地 中转B", "dialer-proxy": "前置代理A" }], {
+                chain: true,
+            }),
+        /dialer-proxy conflict/
+    );
+});
+
 test("source objects and connection fields are preserved, and unspecified block-quic is untouched", () => {
     const input = [
         {

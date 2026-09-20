@@ -33,6 +33,7 @@ import type { NameFormat } from "../../shared/regions";
  * clear/nm: 清理信息节点 / 保留无法识别地区的节点并置底。
  * blpx: 不再需要，排序默认执行；权重在 shared/preferences.ts 中统一配置。
  * blockquic: on/off 显式设置 block-quic；不传则保留节点现有字段。
+ * chain: 根据原节点名中的“中转”或“中转A..Z”写入对应的 dialer-proxy。
  */
 interface RenameArgs {
     [key: string]: string | boolean | undefined;
@@ -41,6 +42,7 @@ interface RenameArgs {
 interface RenameProxy {
     name: string;
     "block-quic"?: string;
+    "dialer-proxy"?: string;
     [key: string]: unknown;
 }
 
@@ -153,6 +155,11 @@ function customTags(name: string, expression: string): string[] {
         .filter(Boolean);
 }
 
+function transitGroup(name: string): string | null {
+    const match = name.normalize("NFKC").match(/中转\s*([A-Za-z])?(?=$|[^A-Za-z0-9])/i);
+    return match ? `前置代理${(match[1] ?? "").toUpperCase()}` : null;
+}
+
 export function renameNodes(proxies: readonly RenameProxy[], args: RenameArgs = {}): RenameProxy[] {
     const separator = text(args.fgf, " ");
     const prefix = text(args.name);
@@ -188,6 +195,18 @@ export function renameNodes(proxies: readonly RenameProxy[], args: RenameArgs = 
         const proxy = { ...original };
         const blockQuic = text(args.blockquic);
         if (blockQuic === "on" || blockQuic === "off") proxy["block-quic"] = blockQuic;
+        if (enabled(args.chain)) {
+            const target = transitGroup(rawName);
+            if (target) {
+                const current = proxy["dialer-proxy"];
+                if (current !== undefined && current !== target) {
+                    throw new Error(
+                        `[override-rules] dialer-proxy conflict on ${original.name}: ${current} != ${target}`
+                    );
+                }
+                proxy["dialer-proxy"] = target;
+            }
+        }
 
         if (region) {
             const labels = customTags(rawName, text(args.blkey));
