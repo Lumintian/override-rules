@@ -22,10 +22,9 @@ flowchart TD
 
     subgraph Parser["3. 节点多维度分类 (node_parser.ts)"]
         CP --> PNL["parseNodesByLanding()"]
-        PNL --> LN["landingNodes"]
+        PNL --> LC["landingChains<br/>(默认链路、A..Z)"]
         PNL --> NLN["nonLandingNodes"]
-        LN --> LCHK{"landingNodes.length > 0<br/>&& nonLandingNodes.length > 0"}
-        LCHK --> LAND["landing: boolean"]
+        LC --> LCHK{"存在链路且<br/>nonLandingNodes 非空"}
         LCHK -->|"true: 用 nonLandingNodes"| PC["parseCountries()"]
         LCHK -->|"false: 用 config.proxies"| PC
         PC --> CN["countryNodes (Record)"]
@@ -40,15 +39,15 @@ flowchart TD
         FF --> BCG
         BCG --> CG["countryGroups (基础组 + 额外 select 组)"]
         CG --> BBL["buildBaseLists()"]
-        LAND --> BBL
+        LC --> BBL
         NLN --> BBL
-        BBL --> BL["BaseLists"]
+        FF --> BBL
+        BBL --> BL["BaseLists<br/>(每条链路独立前置候选)"]
         BL --> BPG["buildProxyGroups()"]
         ACN --> BPG
         CG --> BPG
-        LAND --> BPG
-        LN --> BPG
-        BPG --> PG["proxy-groups<br/>(含基础及额外地区组)"]
+        LC --> BPG
+        BPG --> PG["proxy-groups<br/>(含成对前置/落地组)"]
     end
 
     subgraph Output["5. 最终组装 (main.ts)"]
@@ -99,18 +98,19 @@ flowchart TD
 
 ### 落地/非落地自动检测
 
-`dialer-proxy` 在 Mihomo 链式代理中表示当前节点通过指定代理拨号。脚本据此自动区分：
+`dialer-proxy` 在 Mihomo 链式代理中表示当前节点通过指定代理拨号。脚本识别 `前置代理` 以及 `前置代理A` 到 `前置代理Z`：
 
-- 包含 `dialer-proxy: "前置代理"` 字段的节点 → **落地节点**（目标/出口节点），归入「落地节点」组
-- 其余所有节点 → **非落地节点**（中继/普通节点），归入国家地区分组和「前置代理」组
+- `dialer-proxy: "前置代理"` → 默认链路，生成「前置代理」和「落地节点」
+- `dialer-proxy: "前置代理A"` → A 链路，生成「前置代理A」和「落地节点A」；其余字母同理
+- 未匹配上述名称的节点 → **非落地节点**，用于地区分类及各前置组的入口候选
 
-变量 `landing` 为 `true` 当且仅当两类节点均存在（`landingNodes.length > 0 && nonLandingNodes.length > 0`）。这保证了中继代理组仅在真正需要时才生成，避免了空组或配置不一致的问题。
+只有同时存在已识别的落地链路和非落地节点时才激活链式模式。各链路按实际节点自动发现，不使用数量参数，也不生成空的前置/落地组。`front`、`front_a` 到 `front_z` 可以用逗号分隔的地区代码限制对应前置组；未配置时回退到全部非落地节点。
 
 ### 节点分类
 
 节点在进入配置构建阶段前，进行以下识别：
 
-1. **落地/非落地** — 决定链式代理的节点来源。当 `landing = true` 时，后续的国家分类只扫描非落地节点（即落地节点不参与按国家分发）。
+1. **落地/非落地及链路编号** — 决定链式代理的节点来源。链式模式激活后，国家分类只扫描非落地节点；每组落地节点保留对其同名「前置代理X」的拨号引用。正则地区组也会通过转义后的精确名称排除已发现的落地节点。
 2. **国家/地区** — 通过正则匹配节点名称中的地理位置关键字，将节点归入对应的国家/地区分组。匹配规则定义在 `countriesMeta` 中。
 3. **Tailscale** — 从全部节点中识别 `type: tailscale`，供专用策略组、TUN 和分流规则使用。
 
@@ -120,7 +120,7 @@ flowchart TD
 
 - **统一地区组构建**：`parseCountries()` 返回 `Record<string, ProxyNode[]>`，`getActiveCountryNames()` 返回不含后缀的地区名。`buildCountryGroups()` 统一生成基础地区组和额外地区组，供 `buildBaseLists()` 生成选择列表，并由 `buildProxyGroups()` 合入最终配置，避免组定义和引用不同步。
 - **名称仅在构建层添加**：`"节点"` 后缀（如「香港」→「香港节点」）和 `"额外N"`（如「美国额外1」）不进入分类层；额外组与基础组复用同一份节点来源规则。
-- **数据优于标志**：接收节点信息的参数统一使用具体数据（如 `landingNodes: ProxyNode[]`、`countryNodes: Record<string, ProxyNode[]>`）而非布尔值。布尔标志（如 `landing`）由数据推导得出，保证了判定依据的可追溯性。
+- **数据优于标志**：链式代理使用 `LandingChain[]` 表示实际发现的链路及节点，不维护容易与节点状态失配的 `landing` 数量或布尔参数。
 
 ### args.ts 的默认值
 
@@ -130,9 +130,9 @@ flowchart TD
 
 `countriesMeta.code` 定义各地区的数量参数名，例如 `us`、`sg`；类型范围由 `CountryCode` 维护。`buildFeatureFlags()` 将参数解析为以地区名称为键的 `countryExtraCounts`。数量只接受 `0–100` 的整数，缺省或非法值为 `0`。
 
-`buildCountryGroups()` 按地区权重遍历至少有一个候选节点的地区：基础组遵循 `countryThreshold` 和 `groupType`，额外组按显式数量生成，固定为 `select`，名称为「地区额外1」「地区额外2」等。无该地区节点时不生成空组。两类组均遵循 `regexFilter`，所以正则模式也保留运行时独立匹配及不按 `dialer-proxy` 排除成员的现有行为。
+`buildCountryGroups()` 按地区权重遍历至少有一个候选节点的地区：基础组遵循 `countryThreshold` 和 `groupType`，额外组按显式数量生成，固定为 `select`，名称为「地区额外1」「地区额外2」等。无该地区节点时不生成空组。两类组均遵循 `regexFilter`；链式模式下，正则组的 `exclude-filter` 会合并已发现的落地节点名称，避免重新匹配到落地节点。
 
-基础地区组和额外组直接加入 `选择代理`、服务列表和前置代理列表。不再生成跨地区的 `自动选择` / `故障转移` 组，也不再构建它们的候选列表；基础地区组自身的测速和负载均衡仍遵循 `groupType`。
+基础地区组和额外组直接加入 `选择代理` 和服务列表。各「前置代理X」不再引用地区组，而是直接枚举 `front_x` 指定地区的非落地节点，确保候选不受 `threshold`、额外组或正则动态匹配影响；若映射地区没有候选则至少保留 `DIRECT`。
 
 ### YAML Generator 的参数
 

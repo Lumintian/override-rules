@@ -50,6 +50,7 @@ https://cdn.jsdelivr.net/gh/Lumintian/override-rules/convert.min.js#grouptype=1&
 | `regex` | 基础及额外地区组使用 `include-all + filter` 动态匹配节点 | `false` |
 | `tun` | 启用 TUN 模式 | `false` |
 | `threshold` | 某地区节点数量低于该值时不生成基础地区组，不影响额外地区组 | `2` |
+| `front`、`front_a`…`front_z` | 对应落地链路允许使用的前置地区代码，逗号分隔，例如 `front_a=hk,sg,jp`；未传时使用全部非落地节点 | 全部非落地节点 |
 | `us`、`sg` 等地区代码 | 对应地区的额外手动选择组数量，整数 `0–100`；完整代码见下表 | `0` |
 
 布尔参数支持 `true / false` 或 `1 / 0`。
@@ -82,9 +83,9 @@ https://cdn.jsdelivr.net/gh/Lumintian/override-rules/convert.min.js#grouptype=1&
 
 - 未传参数或值为 `0` 时不生成额外组。负数、小数、非数字或大于 `100` 的值均按 `0` 处理；数量上限用于防止误配置生成过多策略组。
 - 额外组不受 `grouptype` 和 `threshold` 影响。例如美国只有一个候选节点时，默认不生成 `美国节点`，但 `us=2` 仍会生成两个美国额外组。没有对应地区候选节点时不生成空组，即使启用了 `regex=true`。
-- 额外组复用基础地区组的节点来源规则：默认枚举当前节点；`regex=true` 时使用相同的地区正则和排除正则。链式代理激活时，生成资格及枚举成员只依据非落地节点；正则模式仍沿用 `include-all + filter`，不额外按 `dialer-proxy` 排除运行时节点。
+- 额外组复用基础地区组的节点来源规则：默认枚举当前节点；`regex=true` 时使用相同的地区正则和排除正则。链式代理激活时，生成资格及枚举成员只依据非落地节点；正则模式会额外按已发现的落地节点名称排除它们。
 - 组按地区权重排序，同一地区的基础组在前，额外组按编号排列在后。
-- 额外组加入 `选择代理`、通用服务分流列表、启用时的 `前置代理` 以及 `GLOBAL`。哔哩哔哩和巴哈姆特的地区专用列表也会加入对应地区的额外组。
+- 额外组加入 `选择代理`、通用服务分流列表和 `GLOBAL`。每个「前置代理X」直接枚举由 `front_x` 选定地区的非落地节点，不依赖地区组或额外组。哔哩哔哩和巴哈姆特的地区专用列表也会加入对应地区的额外组。
 - 不再生成跨地区的 `自动选择` 和 `故障转移` 组；可在 `选择代理` 中直接选用地区组、额外手动组、启用时的落地组或 `手动选择`。基础地区组自身的测速 / 负载均衡仍由 `grouptype` 控制。
 
 这些数量参数供 JavaScript 动态覆写使用，预生成 YAML 的组合不包含额外地区组。
@@ -111,8 +112,10 @@ https://cdn.jsdelivr.net/gh/Lumintian/override-rules@dist/rename.min.js
 推荐参数组合：
 
 ```text
-https://cdn.jsdelivr.net/gh/Lumintian/override-rules@dist/rename.min.js#flag&blgd&bl&blkey=自建+落地&nm
+https://cdn.jsdelivr.net/gh/Lumintian/override-rules@dist/rename.min.js#flag&blgd&bl&blkey=自建+落地&nm&chain
 ```
+
+`chain` 会识别原节点名称中的「中转」和「中转A..Z」，分别写入 `dialer-proxy: 前置代理` 和 `dialer-proxy: 前置代理A..Z`。
 
 该脚本以 [FengNinger/substore_rename_rule](https://github.com/FengNinger/substore_rename_rule) 为初始基础，现由本项目独立维护，后续实现可能随覆写规则演进而与上游不同。源码、基线版本及许可证信息见 [`scripts/substore/`](scripts/substore/README.md)。
 
@@ -132,12 +135,24 @@ https://cdn.jsdelivr.net/gh/Lumintian/override-rules@dist/rename.min.js#flag&blg
 
 ### 关于链式代理的说明
 
-对于使用机场线路配合自行购买的落地机进行链式代理的情况，在 Substore 添加自建节点时，加入`dialer-proxy: "前置代理"`脚本即可自动识别，并新增「前置代理」和「落地节点」两个代理组。
+落地节点可以直接携带 `dialer-proxy: "前置代理"`，也可以先由改名脚本的 `chain` 参数根据名称写入。带字母标签的节点会形成独立链路：
+
+```text
+美国落地 中转A → dialer-proxy: 前置代理A → 生成「前置代理A」和「落地节点A」
+德国落地 中转B → dialer-proxy: 前置代理B → 生成「前置代理B」和「落地节点B」
+```
+
+覆写脚本仅为实际存在的链路生成成对策略组。不同服务可以分别选择「落地节点A」「落地节点B」，从而同时使用不同的落地线路。
+
+可以通过地区参数限制各前置组的入口候选：
+
+```text
+convert.min.js#front_a=hk,sg,jp&front_b=uk,de,fr
+```
+
+没有配置 `front_a` 等参数时，该前置组使用全部非落地节点；指定地区当前无节点时仍保留 `DIRECT`，避免生成空组。只有落地节点、没有任何非落地节点时不会激活链式模式。
 
 ![新增的代理组](img/dialer-group.png) ![如何配置自建节点](img/dialer-example.png)
-
-> [!WARNING]
-> 当前所有落地节点共用同一个 `前置代理` 策略组，因此修改前置节点会同时影响所有落地节点。这是目前链式代理实现中准备继续优化的一部分。
 
 ## 特殊策略组
 
