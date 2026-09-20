@@ -4,7 +4,8 @@ https://github.com/Lumintian/override-rules
 
 支持的传入参数：
 - grouptype: 基础地区代理组类型（0=select 手动选择, 1=url-test 自动测速, 2=load-balance 负载均衡，默认 1）
-- landing: auto-detected from nodes with `dialer-proxy` field; no user parameter needed
+- landing: auto-detected from nodes using `dialer-proxy: 前置代理` or `前置代理A..Z`
+- front/front_a..front_z: each landing chain's preferred front-proxy country codes, e.g. front_a=hk,sg,jp
 - ipv6: 启用 IPv6 支持（默认 false）
 - tun: 启用 TUN 模式（默认 false）
 - full: 输出完整配置（适合纯内核启动，默认 false）
@@ -64,15 +65,18 @@ export function main(config: ClashConfig, args: ScriptArgs = getRawArgs()): Clas
         tunEnabled,
         countryThreshold,
         countryExtraCounts,
+        frontCountryNamesByChain,
     } = buildFeatureFlags(args);
     if (!config.proxies || !Array.isArray(config.proxies)) {
         throw new Error("[override-rules] 错误：Clash 配置中缺少有效的 proxies 字段");
     }
     // Order the merged collection once before deriving every explicit candidate list.
     const proxies = sortProxyNodes(config.proxies);
-    const { landingNodes, nonLandingNodes } = parseNodesByLanding(proxies);
-    const landing = landingNodes.length > 0 && nonLandingNodes.length > 0;
-    const countryNodes = parseCountries(landing ? nonLandingNodes : proxies);
+    const parsedLanding = parseNodesByLanding(proxies);
+    const landingChains =
+        parsedLanding.nonLandingNodes.length > 0 ? parsedLanding.landingChains : [];
+    const nonLandingNodes = landingChains.length > 0 ? parsedLanding.nonLandingNodes : proxies;
+    const countryNodes = parseCountries(nonLandingNodes);
     const countryNames = getActiveCountryNames(countryNodes, countryThreshold);
     const countryGroups = buildCountryGroups({
         regexFilter,
@@ -80,17 +84,21 @@ export function main(config: ClashConfig, args: ScriptArgs = getRawArgs()): Clas
         countryNames,
         countryNodes,
         countryExtraCounts,
+        excludedNodeNames: landingChains.flatMap((chain) =>
+            chain.nodes.map((node) => node.name).filter(Boolean)
+        ),
     });
     const allNodes = proxies.map((node) => node.name);
     const tailscaleNodes = parseTailscale(proxies);
     const hasTailscale = tailscaleNodes.length > 0;
 
-    const { defaultProxies, defaultProxiesDirect, defaultSelector, frontProxySelector } =
+    const { defaultProxies, defaultProxiesDirect, defaultSelector, frontProxySelectors } =
         buildBaseLists({
-            landing,
+            landingChains,
             countryGroups,
+            countryNodes,
             nonLandingNodes,
-            regexFilter,
+            frontCountryNamesByChain,
         });
 
     const proxyGroups = buildProxyGroups({
@@ -98,12 +106,11 @@ export function main(config: ClashConfig, args: ScriptArgs = getRawArgs()): Clas
         countryNames,
         countryGroups,
         tailscaleNodes,
-        landing,
-        landingNodes,
+        landingChains,
         defaultProxies,
         defaultProxiesDirect,
         defaultSelector,
-        frontProxySelector,
+        frontProxySelectors,
     });
 
     const globalProxies = proxyGroups.map((item) => String(item.name));

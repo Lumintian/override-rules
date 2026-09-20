@@ -1,5 +1,6 @@
 import { countriesMeta } from "./constants";
-import type { ProxyNode } from "./types";
+import { PROXY_GROUPS } from "./constants";
+import type { LandingChain, ProxyNode } from "./types";
 import { describeName } from "../shared/display_name";
 import {
     classifyNode,
@@ -49,19 +50,48 @@ export function parseTailscale(nodes: ProxyNode[]): ProxyNode[] {
     return (nodes || []).filter((proxy) => proxy.type === "tailscale");
 }
 
-/** Existing chain semantics: nodes dialing through 前置代理 belong to the landing list. */
+function landingChainId(value: unknown): string | null {
+    if (typeof value !== "string") return null;
+    const match = /^前置代理([A-Z])?$/.exec(value.trim());
+    return match ? (match[1] ?? "").toUpperCase() : null;
+}
+
+/** Nodes dialing through 前置代理 or 前置代理A..Z belong to separate landing chains. */
 export function parseNodesByLanding(nodes: ProxyNode[]): {
     landingNodes: ProxyNode[];
     nonLandingNodes: ProxyNode[];
+    landingChains: LandingChain[];
 } {
-    const landingNodes: ProxyNode[] = [];
+    const byChain = new Map<string, ProxyNode[]>();
     const nonLandingNodes: ProxyNode[] = [];
     for (const node of nodes || []) {
         if (!node.name) continue;
-        if (node["dialer-proxy"] === "前置代理") landingNodes.push(node);
-        else nonLandingNodes.push(node);
+        const id = landingChainId(node["dialer-proxy"]);
+        if (id === null) {
+            nonLandingNodes.push(node);
+        } else {
+            const chainNodes = byChain.get(id) ?? [];
+            chainNodes.push(node);
+            byChain.set(id, chainNodes);
+        }
     }
-    return { landingNodes, nonLandingNodes };
+    const ids = [...byChain.keys()].sort((left, right) => {
+        if (left === right) return 0;
+        if (left === "") return -1;
+        if (right === "") return 1;
+        return left.localeCompare(right);
+    });
+    const landingChains = ids.map((id) => ({
+        id,
+        frontGroupName: `${PROXY_GROUPS.FRONT_PROXY}${id}`,
+        landingGroupName: `${PROXY_GROUPS.LANDING}${id}`,
+        nodes: byChain.get(id)!,
+    }));
+    return {
+        landingNodes: landingChains.flatMap(({ nodes: chainNodes }) => chainNodes),
+        nonLandingNodes,
+        landingChains,
+    };
 }
 
 /** Only registered countries generate groups; other known regions still sort correctly. */

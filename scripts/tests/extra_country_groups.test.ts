@@ -129,8 +129,10 @@ for (const regex of [false, true]) {
         } else {
             assert.equal(getGroup(result, "美国额外1").filter, countriesMeta.美国.pattern);
         }
-        assert.ok(getGroup(result, "前置代理").proxies?.includes("美国额外1"));
-        assert.ok(getGroup(result, "前置代理").proxies?.includes("美国额外2"));
+        const frontCandidates = getGroup(result, "前置代理").proxies ?? [];
+        assert.ok(proxies.every((node) => frontCandidates.includes(node.name)));
+        assert.ok(frontCandidates.includes("DIRECT"));
+        assert.ok(!frontCandidates.some((name) => /额外\d+$/.test(name)));
         assertValidReferences(result);
         const onlyLandingInCountry = convert(
             { proxies: [{ name: "香港 A" }, landingNode] },

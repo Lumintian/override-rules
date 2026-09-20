@@ -23,6 +23,7 @@ export type CountryCode =
     | "ua";
 
 export interface ScriptArgs extends Partial<Record<CountryCode, string>> {
+    [key: string]: string | undefined;
     grouptype?: string;
     ipv6?: string;
     full?: string;
@@ -46,6 +47,7 @@ export interface FeatureFlags {
     regexFilter: boolean;
     countryThreshold: number;
     countryExtraCounts: Record<string, number>;
+    frontCountryNamesByChain: Record<string, string[]>;
     tunEnabled: boolean;
 }
 
@@ -207,18 +209,26 @@ export interface CountryMeta {
     excludePattern?: string;
 }
 
+export interface LandingChain {
+    id: string;
+    frontGroupName: string;
+    landingGroupName: string;
+    nodes: ProxyNode[];
+}
+
 export interface BaseLists {
     defaultProxies: string[];
     defaultProxiesDirect: string[];
     defaultSelector: string[];
-    frontProxySelector: string[];
+    frontProxySelectors: Record<string, string[]>;
 }
 
 export interface BuildBaseListsInput {
-    landing: boolean;
+    landingChains: LandingChain[];
     countryGroups: ProxyGroup[];
+    countryNodes: Record<string, ProxyNode[]>;
     nonLandingNodes: ProxyNode[];
-    regexFilter: boolean;
+    frontCountryNamesByChain: Record<string, string[]>;
 }
 
 export interface BuildCountryGroupsInput {
@@ -227,17 +237,17 @@ export interface BuildCountryGroupsInput {
     countryNames: string[];
     countryNodes: Record<string, ProxyNode[]>;
     countryExtraCounts: Record<string, number>;
+    excludedNodeNames: string[];
 }
 
 export interface BuildProxyGroupsInput {
     allNodes: string[];
     countryNames: string[];
     countryGroups: ProxyGroup[];
-    landing: boolean;
-    landingNodes: ProxyNode[];
+    landingChains: LandingChain[];
     tailscaleNodes: ProxyNode[];
     defaultProxies: string[];
     defaultProxiesDirect: string[];
     defaultSelector: string[];
-    frontProxySelector: string[];
+    frontProxySelectors: Record<string, string[]>;
 }

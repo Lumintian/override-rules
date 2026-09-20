@@ -59,6 +59,43 @@ test("front and landing candidate lists retain sorted order without changing dia
     for (const node of output.proxies!) assert.ok(config.proxies!.includes(node));
 });
 
+test("multiple landing chains use independent region-mapped front groups", () => {
+    const config: ClashConfig = {
+        proxies: [
+            { name: "A | 香港 01" },
+            { name: "A | 新加坡 01" },
+            { name: "B | 美国 01" },
+            { name: "美国 落地 A", "dialer-proxy": "前置代理A" },
+            { name: "德国 落地 B", "dialer-proxy": "前置代理B" },
+        ],
+    };
+    const output = main(config, { threshold: "1", front_a: "hk,sg", front_b: "us" });
+    assert.deepEqual(group(output, "落地节点A").proxies, ["美国 落地 A"]);
+    assert.deepEqual(group(output, "落地节点B").proxies, ["德国 落地 B"]);
+    assert.deepEqual(group(output, "前置代理A").proxies, [
+        "A | 香港 01",
+        "A | 新加坡 01",
+        "DIRECT",
+    ]);
+    assert.deepEqual(group(output, "前置代理B").proxies, ["B | 美国 01", "DIRECT"]);
+    assert.ok(!group(output, "美国节点").proxies?.includes("美国 落地 A"));
+    assert.deepEqual(group(output, "选择代理").proxies?.slice(0, 2), ["落地节点A", "落地节点B"]);
+});
+
+test("regex country groups explicitly exclude discovered landing node names", () => {
+    const output = main(
+        {
+            proxies: [{ name: "美国 入口" }, { name: "美国 落地 .*", "dialer-proxy": "前置代理A" }],
+        },
+        { threshold: "1", regex: "true" }
+    );
+    assert.ok((group(output, "美国节点")["exclude-filter"] ?? "").includes("美国 落地 \\.\\*"));
+});
+
+test("invalid front country codes fail explicitly", () => {
+    assert.throws(() => main(input, { front_a: "hk,unknown" }), /front_a.*unknown/);
+});
+
 test("all generated explicit references remain valid and STABLE membership is retained", () => {
     const output = main(input, { threshold: "1", hk: "2" });
     const valid = new Set([
