@@ -22,28 +22,23 @@ const 默认预设 = "r";
 
 const 预设 = {
     r: {
-        说明: "自建-R",
-        名称前缀: "自建-R |",
-        输出格式: "中文",
-        显示国旗: true,
-        保留标签: ["Legend", "Zouter", "Dmit", "Azure", "V6", "中转A"],
-        其他参数: {
-            // bl: true,
-            // blgd: true,
-            // nm: true,
-            // chain: true,
-        },
+        name: "自建-R |",
+        out: "zh",
+        flag: true,
+        blkey: "Legend+Zouter+Dmit+Azure+V6+中转A",
+        // 替换示例：blkey: "Legend+Zouter>中转+Azure",
+        // bl: true,
+        // blgd: true,
+        // nm: true,
+        // chain: true,
     },
 
     landing: {
-        说明: "落地节点",
-        名称前缀: "落地 |",
-        输出格式: "中文",
-        显示国旗: true,
-        保留标签: ["家宽", "落地", "中转"],
-        其他参数: {
-            blgd: true,
-        },
+        name: "落地 |",
+        out: "zh",
+        flag: true,
+        blkey: "家宽+落地+中转",
+        blgd: true,
     },
 };
 
@@ -66,11 +61,7 @@ async function operator(proxies = [], targetPlatform, context) {
     }
 
     const 参数 = {
-        ...(当前预设.其他参数 || {}),
-        name: 当前预设.名称前缀 || "",
-        out: 当前预设.输出格式 === "英文" ? "en" : "zh",
-        flag: 当前预设.显示国旗 === true,
-        blkey: (当前预设.保留标签 || []).join("+"),
+        ...当前预设,
         ...外部参数,
     };
 
@@ -108,7 +99,9 @@ async function operator(proxies = [], targetPlatform, context) {
 globalThis.operator = operator;
 ```
 
-`保留标签` 使用数组书写，包装脚本会自动转换为 `blkey=A+B+C`。`其他参数` 可填写[重命名参数](./README.md#重命名参数)中的参数；URL 中临时传入的参数优先于 Gist 预设。
+每个预设直接填写 [`rename.min.js` 原生参数](./README.md#重命名参数)，不再引入需要二次映射的中文字段。唯一新增的 `preset` 只用于选择预设，不会传给上游重命名脚本。
+
+`blkey` 保持原生字符串语法：使用 `+` 分隔多条规则，使用 `匹配词>输出标签` 替换命中后的标签，例如 `Legend+Zouter>中转+Azure`。因为参数写在 JavaScript 对象中，中文、空格和 `>` 无需 URL 编码。URL 中临时传入的原生参数优先于 Gist 预设。
 
 ## 在 Sub-Store 中使用
 
