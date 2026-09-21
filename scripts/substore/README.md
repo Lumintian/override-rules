@@ -53,6 +53,12 @@ https://cdn.jsdelivr.net/gh/Lumintian/override-rules@dist/sort.min.js
 
 如果之前隐藏了倍率或线路标签，`sort` 无法在序列化后的名字中恢复这些信息；多来源排序推荐保留 `bl&blgd`。
 
+## 保存参数预设
+
+当 `blkey`、中文前缀或多来源参数使脚本 URL 过长时，可以使用 Secret Gist 保存可读的参数预设，再由包装脚本调用本项目发布的 `rename.min.js`。这样无需反复编辑 URL 编码后的长参数串，也可以在同一个 Gist 中维护多套配置。
+
+完整模板、Sub-Store 链接格式、缓存方式和安全边界见 [使用 Gist 保存 Sub-Store 重命名预设](./GIST_PRESETS.md)。
+
 ## 重命名参数
 
 | 参数 | 作用 |
