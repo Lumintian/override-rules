@@ -118,12 +118,29 @@ test("chain tags assign distinct dialer groups without overwriting conflicts", (
     assert.equal(output.find((node) => node.name.includes("美国"))?.["dialer-proxy"], "前置代理");
     assert.equal(output.find((node) => node.name.includes("德国"))?.["dialer-proxy"], "前置代理A");
     assert.equal(output.find((node) => node.name.includes("日本"))?.["dialer-proxy"], undefined);
+
+    const replaced = renameNodes([{ name: "台湾 禁止直连" }], {
+        chain: true,
+        blkey: "禁止直连>中转A",
+        one: true,
+    });
+    assert.equal(replaced[0].name, "台湾 中转A");
+    assert.equal(replaced[0]["dialer-proxy"], "前置代理A");
+
     assert.throws(
         () =>
             renameNodes([{ name: "美国 落地 中转B", "dialer-proxy": "前置代理A" }], {
                 chain: true,
             }),
         /dialer-proxy conflict/
+    );
+    assert.throws(
+        () =>
+            renameNodes([{ name: "台湾 中转A 禁止直连" }], {
+                chain: true,
+                blkey: "禁止直连>中转B",
+            }),
+        /chain tag conflict/
     );
 });
 

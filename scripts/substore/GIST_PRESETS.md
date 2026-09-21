@@ -18,27 +18,26 @@ Sub-Store → Gist 预设包装脚本 → rename.min.js → 重命名后的节�
 /*
  * 只需要编辑这一部分
  */
+const 公共参数 = {
+    out: "zh",
+    flag: true,
+    bl: true,
+    chain: true,
+};
+
 const 默认预设 = "df";
 
 const 预设 = {
     df: {
         name: "默认 |",
-        out: "zh",
-        flag: true,
         blkey: "Legend+Zouter+Dmit+Azure+V6+中转A",
-        bl: true,
-        chain: true,
         // 替换示例：blkey: "Legend+Zouter>中转+Azure",
-        // bl: true,
         // blgd: true,
         // nm: true,
-        // chain: true,
     },
 
     landing: {
         name: "落地 |",
-        out: "zh",
-        flag: true,
         blkey: "家宽+落地+中转",
         blgd: true,
     },
@@ -65,6 +64,7 @@ async function operator(proxies = [], targetPlatform, context) {
     }
 
     const 参数 = {
+        ...公共参数,
         ...当前预设,
         ...外部参数,
     };
@@ -107,7 +107,7 @@ async function operator(proxies = [], targetPlatform, context) {
 globalThis.operator = operator;
 ```
 
-每个预设直接填写 [`rename.min.js` 原生参数](./README.md#重命名参数)，包装脚本只扩展两个会被自动消费的 URL 参数：
+包装脚本只扩展两个会被自动消费的 URL 参数：
 
 - `preset`：选择预设，不传给上游重命名脚本。
 - `blkey_add`：补充到最终生效的原生 `blkey`，不传给上游重命名脚本。

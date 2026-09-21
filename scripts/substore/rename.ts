@@ -33,7 +33,7 @@ import type { NameFormat } from "../../shared/regions";
  * clear/nm: 清理信息节点 / 保留无法识别地区的节点并置底。
  * blpx: 不再需要，排序默认执行；权重在 shared/preferences.ts 中统一配置。
  * blockquic: on/off 显式设置 block-quic；不传则保留节点现有字段。
- * chain: 根据原节点名中的“中转”或“中转A..Z”写入对应的 dialer-proxy。
+ * chain: 根据原节点名或 blkey 输出标签中的“中转”或“中转A..Z”写入对应的 dialer-proxy。
  */
 interface RenameArgs {
     [key: string]: string | boolean | undefined;
@@ -195,21 +195,9 @@ export function renameNodes(proxies: readonly RenameProxy[], args: RenameArgs = 
         const proxy = { ...original };
         const blockQuic = text(args.blockquic);
         if (blockQuic === "on" || blockQuic === "off") proxy["block-quic"] = blockQuic;
-        if (enabled(args.chain)) {
-            const target = transitGroup(rawName);
-            if (target) {
-                const current = proxy["dialer-proxy"];
-                if (current !== undefined && current !== target) {
-                    throw new Error(
-                        `[override-rules] dialer-proxy conflict on ${original.name}: ${current} != ${target}`
-                    );
-                }
-                proxy["dialer-proxy"] = target;
-            }
-        }
+        const labels = region ? customTags(rawName, text(args.blkey)) : [];
 
         if (region) {
-            const labels = customTags(rawName, text(args.blkey));
             if (
                 (enabled(args.bl) || (enabled(args.blgd) && /ˣ/.test(rawName))) &&
                 multiplier !== null &&
@@ -229,6 +217,28 @@ export function renameNodes(proxies: readonly RenameProxy[], args: RenameArgs = 
                 .join(separator);
         } else {
             proxy.name = [nodePrefix, rawName].filter(Boolean).join(separator);
+        }
+
+        if (enabled(args.chain)) {
+            const targets = [transitGroup(rawName), ...labels.map(transitGroup)].filter(
+                (target): target is string => target !== null
+            );
+            const uniqueTargets = [...new Set(targets)];
+            if (uniqueTargets.length > 1) {
+                throw new Error(
+                    `[override-rules] chain tag conflict on ${original.name}: ${uniqueTargets.join(" != ")}`
+                );
+            }
+            const target = uniqueTargets[0];
+            if (target) {
+                const current = proxy["dialer-proxy"];
+                if (current !== undefined && current !== target) {
+                    throw new Error(
+                        `[override-rules] dialer-proxy conflict on ${original.name}: ${current} != ${target}`
+                    );
+                }
+                proxy["dialer-proxy"] = target;
+            }
         }
         entries.push({ proxy, meta, originalName: original.name });
     }
