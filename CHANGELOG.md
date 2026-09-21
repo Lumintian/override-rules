@@ -1,5 +1,20 @@
 # Changelog
 
+## [3.0.1](https://github.com/Lumintian/override-rules/compare/src-v3.0.0...src-v3.0.1) (2026-09-21)
+
+
+### Bug Fixes
+
+- Derive chain from custom labels ([5caf92e](https://github.com/Lumintian/override-rules/commit/5caf92e202cb2c7ae5ed1cb7d7e6d7eb1f77e9b3))
+
+
+### Documentation
+
+- Clarify the usage and support additional blkey ([4ab0704](https://github.com/Lumintian/override-rules/commit/4ab0704e6b71eb6226b83e37d6fe7a50b3323a40))
+- Use native arguments in gist presets ([07a798e](https://github.com/Lumintian/override-rules/commit/07a798efc0e6a39976c9403ad6c65c8c1160dc11))
+- Split detailed reference into guides ([145f839](https://github.com/Lumintian/override-rules/commit/145f83981df6a545aa5123b5d9f535b5c99d08d9))
+- Add gist preset wrapper guide ([b5d7d36](https://github.com/Lumintian/override-rules/commit/b5d7d36501c0caaa68429266d6054b2c77a1af84))
+- Correct the web link ([701150f](https://github.com/Lumintian/override-rules/commit/701150fefe72f18df81344801756846b2fe91374))
 ## [3.0.0](https://github.com/Lumintian/override-rules/compare/src-v2.7.6...src-v3.0.0) (2026-09-20)
 
 
