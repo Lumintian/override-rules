@@ -8,7 +8,7 @@
 Sub-Store → Gist 预设包装脚本 → rename.min.js → 重命名后的节点
 ```
 
-包装脚本只保存个人参数；实际重命名仍由本项目发布的 `rename.min.js` 完成。
+包装脚本只保存常用的个人参数(支持参数覆写)；实际重命名仍由本项目发布的 `rename.min.js` 完成。
 
 ## 包装脚本
 
@@ -18,14 +18,16 @@ Sub-Store → Gist 预设包装脚本 → rename.min.js → 重命名后的节�
 /*
  * 只需要编辑这一部分
  */
-const 默认预设 = "r";
+const 默认预设 = "df";
 
 const 预设 = {
-    r: {
-        name: "自建-R |",
+    df: {
+        name: "默认 |",
         out: "zh",
         flag: true,
         blkey: "Legend+Zouter+Dmit+Azure+V6+中转A",
+        bl: true,
+        chain: true,
         // 替换示例：blkey: "Legend+Zouter>中转+Azure",
         // bl: true,
         // blgd: true,
@@ -51,7 +53,9 @@ const 上游脚本 =
 async function operator(proxies = [], targetPlatform, context) {
     const 外部参数 = typeof $arguments === "undefined" ? {} : { ...$arguments };
     const 预设名称 = String(外部参数.preset || 默认预设);
+    const 补充Blkey = 外部参数.blkey_add;
     delete 外部参数.preset;
+    delete 外部参数.blkey_add;
 
     const 当前预设 = 预设[预设名称];
     if (!当前预设) {
@@ -64,6 +68,10 @@ async function operator(proxies = [], targetPlatform, context) {
         ...当前预设,
         ...外部参数,
     };
+    if (typeof 补充Blkey === "string" && 补充Blkey) {
+        const 当前Blkey = typeof 参数.blkey === "string" ? 参数.blkey : "";
+        参数.blkey = [当前Blkey, 补充Blkey].filter(Boolean).join("+");
+    }
 
     const response = await $substore.http.get({
         url: 上游脚本,
@@ -99,16 +107,21 @@ async function operator(proxies = [], targetPlatform, context) {
 globalThis.operator = operator;
 ```
 
-每个预设直接填写 [`rename.min.js` 原生参数](./README.md#重命名参数)，不再引入需要二次映射的中文字段。唯一新增的 `preset` 只用于选择预设，不会传给上游重命名脚本。
+每个预设直接填写 [`rename.min.js` 原生参数](./README.md#重命名参数)，包装脚本只扩展两个会被自动消费的 URL 参数：
 
-`blkey` 保持原生字符串语法：使用 `+` 分隔多条规则，使用 `匹配词>输出标签` 替换命中后的标签，例如 `Legend+Zouter>中转+Azure`。因为参数写在 JavaScript 对象中，中文、空格和 `>` 无需 URL 编码。URL 中临时传入的原生参数优先于 Gist 预设。
+- `preset`：选择预设，不传给上游重命名脚本。
+- `blkey_add`：补充到最终生效的原生 `blkey`，不传给上游重命名脚本。
+
+普通同名参数仍然执行覆写；`blkey_add` 则执行补充。如果同时传入 `blkey` 和 `blkey_add`，会先用 URL 中的 `blkey` 覆写预设，再追加 `blkey_add`。
+
+`blkey` 与 `blkey_add` 都使用原生规则语法：`+` 分隔规则，`匹配词>输出标签` 执行标签替换。`blkey_add` 只是追加规则；如果预设中已经存在同一个匹配词，原规则与补充规则都会生效。需要替换或删除已有规则时，应使用 `blkey` 完整覆写。
 
 ## 在 Sub-Store 中使用
 
 使用不包含 Gist 版本哈希的 Raw 地址，以便编辑后始终读取最新内容：
 
 ```text
-https://gist.githubusercontent.com/用户名/GIST_ID/raw/rename-preset.js#preset=r#noCache
+https://gist.githubusercontent.com/用户名/GIST_ID/raw/rename-preset.js#preset=df#noCache
 ```
 
 切换另一套预设时只需修改短名称：
@@ -117,13 +130,11 @@ https://gist.githubusercontent.com/用户名/GIST_ID/raw/rename-preset.js#preset
 https://gist.githubusercontent.com/用户名/GIST_ID/raw/rename-preset.js#preset=landing#noCache
 ```
 
-如果只有一套配置，可以省略 `preset`，由 `默认预设` 决定：
+在 `df` 预设的 `blkey` 基础上补充 `Premium`，并将命中的 `IEPL` 输出为 `LPEI`：
 
 ```text
-https://gist.githubusercontent.com/用户名/GIST_ID/raw/rename-preset.js#noCache
+https://gist.githubusercontent.com/用户名/GIST_ID/raw/rename-preset.js#preset=df&blkey_add=Premium+IEPL%3ELPEI#noCache
 ```
-
-第一个 Fragment 保存包装脚本参数；第二个 `#noCache` 是 Sub-Store 的附加选项，用于避免继续使用旧的 Gist 脚本缓存。
 
 ## 更新与安全边界
 
