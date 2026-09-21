@@ -1,6 +1,6 @@
 # Sub-Store 节点预处理
 
-本目录维护与 Mihomo 覆写配套的两个节点操作：`rename` 负责规范化、排序和编号；`sort` 负责在多个来源合并后只排序。两个入口与 `convert` 共享 [`shared/preferences.ts`](../../shared/preferences.ts) 的地区、来源前缀和类别偏好。
+本目录维护与 Mihomo 覆写配套的两个节点操作：`rename` 负责单个来源的规范化、地区/类别排序和编号；`sort` 负责多个来源合并后的地区/来源/类别排序。两个入口与 `convert` 共享 [`shared/preferences.ts`](../../shared/preferences.ts) 的地区和类别偏好；来源前缀只在合并后的 `sort` / `convert` 阶段参与排序。
 
 完整的算法约定、可配置权重与边界见 [节点排序与命名约定](../../docs/NODE_ORDERING.md)。
 
@@ -32,7 +32,17 @@ npm run build
 https://cdn.jsdelivr.net/gh/Lumintian/override-rules@dist/rename.min.js#flag&blgd&bl&nm&clear
 ```
 
-这组参数保留倍率与常见线路标签，清除明确的信息节点，并将无法识别地区的节点保留在最后。排序默认执行，不再需要 `blpx`。
+这组参数保留倍率与常见线路标签，清除明确的信息节点，并将无法识别地区的节点保留在最后。单来源的地区/类别排序默认执行，不再需要 `blpx`。
+
+## 重命名处理顺序
+
+`rename` 一次只处理一个来源，不从原节点名推断服务商，也不把 `|` 当作来源分隔符。处理顺序为：
+
+```text
+完整原名称 → 过滤 → 地区/倍率识别 → 标签与 chain → 显式 name 前缀 → 地区/类别排序 → 编号 → 引用改写
+```
+
+来源前缀只来自 `name` 参数。详细边界与编号规则见 [节点排序与命名约定](../../docs/NODE_ORDERING.md#rename规范化单来源排序独立编号)。
 
 ## 多个来源
 
@@ -43,13 +53,13 @@ rename.min.js#name=机场A%20%7C&flag&blgd&bl&nm&clear
 rename.min.js#name=机场B%20%7C&flag&blgd&bl&nm&clear
 ```
 
-在合并订阅的节点操作末尾追加：
+合并后如果要直接导出 provider，或需要先查看规范化后的全局顺序，在节点操作末尾追加：
 
 ```text
 https://cdn.jsdelivr.net/gh/Lumintian/override-rules@dist/sort.min.js
 ```
 
-`sort` 只调整数组顺序，不重复编号、不删除节点、不改连接字段。合并后的集合可以继续交给 `convert`，或导出为 provider 的节点内容。不要用再次运行 `rename` 来代替合并后的纯排序。
+`sort` 只调整数组顺序，不重复编号、不删除节点、不改连接字段。若合并后的集合会立即交给 `convert.min.js`，convert 本身会执行同样的全局排序，无须为了覆写结果额外运行 `sort`。不要用再次运行 `rename` 来代替合并后的纯排序。
 
 如果之前隐藏了倍率或线路标签，`sort` 无法在序列化后的名字中恢复这些信息；多来源排序推荐保留 `bl&blgd`。
 
@@ -73,7 +83,7 @@ https://cdn.jsdelivr.net/gh/Lumintian/override-rules@dist/sort.min.js
 | `blnx` | 仅保留明确倍率大于 1 的节点 |
 | `nm` | 保留无法识别地区的节点并置底；未开启则移除 |
 | `one` | 某个完整 baseName 只有一个节点时省略 01 |
-| `name=名称` | 添加来源前缀；多来源推荐 `name=机场A%20%7C` |
+| `name=名称` | 显式添加来源前缀；多来源推荐 `name=机场A%20%7C`。未传时不会从原节点名推断或保留来源前缀 |
 | `nf` | 将 name 前缀放在国旗之前，不改变排序身份 |
 | `fgf=` | 名称字段分隔符，默认空格 |
 | `sn=` | baseName 与序号的分隔符，默认空格 |
@@ -82,7 +92,7 @@ https://cdn.jsdelivr.net/gh/Lumintian/override-rules@dist/sort.min.js
 | `blpx` | 已无须传入；新排序始终执行，此参数不再控制排序 |
 | `blockquic=on/off` | 显式设置 block-quic；不传时保留原字段 |
 
-地区 → 前缀 → 类别逐层成块，同层级保持源顺序。类别默认是普通 1 倍 / 未标倍率、特殊标签、高倍率、低倍率；低倍率只在当前地区的当前前缀内沉底。
+rename 阶段按“地区 → 类别”逐层成块，同层级保持源顺序；多个来源合并后，sort / convert 再按“地区 → 显式来源前缀 → 类别”排序。类别默认是普通 1 倍 / 未标倍率、特殊标签、高倍率、低倍率。
 
 编号按完整 baseName 独立计数，例如 `香港 01`、`香港 02` 与 `香港 0.2× 01`。这是显示序号，不是永久节点标识。
 

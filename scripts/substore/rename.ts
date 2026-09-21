@@ -19,13 +19,13 @@ import {
 } from "../../shared/node_order";
 import { rewriteDialerReferences } from "../../shared/node_references";
 import type { NodeOrderMeta } from "../../shared/node_order";
-import { FG, findRegion, regionNames, splitPrefix } from "../../shared/regions";
+import { FG, findRegion, regionNames } from "../../shared/regions";
 import type { NameFormat } from "../../shared/regions";
 
 /**
  * URL Fragment 参数仍使用原有名称，本次不整体改造参数体系。
  * in/out: cn(zh), us(en), quan, gq(flag); 未指定 in 时自动识别。
- * name/nf: 名称前缀 / 前缀放在国旗之前。已有 "提供商 | 地区" 的前缀会保留。
+ * name/nf: 显式名称前缀 / 前缀放在国旗之前；不从原节点名推断来源前缀。
  * fgf/sn: 名称字段 / 编号分隔符，默认空格。
  * flag/one: 添加国旗 / 单个 baseName 不显示 01。
  * bl/blgd/blkey: 保留倍率 / 固定标签 / 自定义标签（+ 分隔，> 替换）。
@@ -170,9 +170,8 @@ export function renameNodes(proxies: readonly RenameProxy[], args: RenameArgs = 
     const entries: Array<{ proxy: RenameProxy; meta: NodeOrderMeta; originalName: string }> = [];
 
     for (const original of proxies) {
-        const split = splitPrefix(original.name);
-        const rawName = split.body;
-        const nodePrefix = prefix || (split.prefix ? `${split.prefix} |` : "");
+        const rawName = original.name;
+        const nodePrefix = prefix;
         if (enabled(args.clear) && informationName.test(rawName)) continue;
         const multiplier = readMultiplier(rawName);
         if (enabled(args.nx) && multiplier !== null && multiplier !== 1) continue;
@@ -186,12 +185,6 @@ export function renameNodes(proxies: readonly RenameProxy[], args: RenameArgs = 
         const region = findRegion(rawName, input) ?? findRegion(normalized, input);
         if (!region && !enabled(args.nm)) continue;
 
-        // Sort metadata is captured before any display option can discard it.
-        const meta: NodeOrderMeta = {
-            country: region?.country ?? null,
-            prefix: nodePrefix.replace(/[\s|]+$/g, ""),
-            category: classifyNode(multiplier, hasSpecialTag(rawName)),
-        };
         const proxy = { ...original };
         const blockQuic = text(args.blockquic);
         if (blockQuic === "on" || blockQuic === "off") proxy["block-quic"] = blockQuic;
@@ -240,6 +233,13 @@ export function renameNodes(proxies: readonly RenameProxy[], args: RenameArgs = 
                 proxy["dialer-proxy"] = target;
             }
         }
+
+        // A rename invocation handles one source. Global source-prefix ordering happens after merge.
+        const meta: NodeOrderMeta = {
+            country: region?.country ?? null,
+            prefix: "",
+            category: classifyNode(multiplier, hasSpecialTag(rawName)),
+        };
         entries.push({ proxy, meta, originalName: original.name });
     }
 

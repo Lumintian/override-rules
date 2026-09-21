@@ -1,17 +1,8 @@
 import assert from "node:assert/strict";
 import { test } from "node:test";
 import { renameNodes } from "../substore/rename";
-import { describeName } from "../../shared/display_name";
-import { splitPrefix } from "../../shared/regions";
-
 const named = (...names: string[]) => names.map((name) => ({ name }));
 const args = { bl: true, blgd: true, flag: true, nm: true };
-
-test("a country-named provider is disambiguated by the region after the delimiter", () => {
-    assert.deepEqual(splitPrefix("香港 | 美国 01"), { prefix: "香港", body: "美国 01" });
-    assert.equal(describeName("香港 | 美国 01").country, "美国");
-    assert.deepEqual(splitPrefix("香港 | IPLC 01"), { prefix: "", body: "香港 | IPLC 01" });
-});
 
 test("canonical fixed labels survive another renaming pass", () => {
     const once = renameNodes(named("香港 IPLC 家宽 0.2x", "日本 商宽", "新加坡 核心"), args);

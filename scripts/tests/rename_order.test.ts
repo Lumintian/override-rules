@@ -2,7 +2,7 @@ import assert from "node:assert/strict";
 import { test } from "node:test";
 import { renameNodes } from "../substore/rename";
 import { describeName, orderNamedNodes } from "../../shared/display_name";
-import { EN, FG, QC, ZH, findRegion } from "../../shared/regions";
+import { EN, FG, QC, ZH, findRegion, splitPrefix } from "../../shared/regions";
 
 const proxies = (names: string[]) =>
     names.map((name, index) => ({ name, server: `test-${index}.invalid`, port: 443 }));
@@ -43,28 +43,19 @@ test("the reported ten-node regression stays in country blocks with independent 
     );
 });
 
-test("country -> explicit provider prefix -> category, not global low-multiplier sinking", () => {
+test("rename reads the full raw name and only uses the explicit name prefix", () => {
     assert.deepEqual(
         names(
-            renameNodes(
-                proxies([
-                    "A | 香港 0.2x",
-                    "B | 新加坡",
-                    "B | 香港",
-                    "A | 香港 1x",
-                    "B | 香港 0.5x",
-                ]),
-                args
-            )
+            renameNodes(proxies(["香港W02 | IEPL", "日本N01 | IPLC"]), {
+                name: "2-IKUUU |",
+                flag: true,
+                blkey: "IEPL+IPLC",
+                one: true,
+            })
         ),
-        [
-            "🇭🇰 A | 香港 01",
-            "🇭🇰 A | 香港 0.2× 01",
-            "🇭🇰 B | 香港 01",
-            "🇭🇰 B | 香港 0.5× 01",
-            "🇸🇬 B | 新加坡 01",
-        ]
+        ["🇭🇰 2-IKUUU | 香港 IEPL", "🇯🇵 2-IKUUU | 日本 IPLC"]
     );
+    assert.deepEqual(names(renameNodes(proxies(["机场A | 香港"]), { one: true })), ["香港"]);
 });
 
 test("multiple preserved labels compose rather than overwriting each other", () => {
@@ -260,6 +251,8 @@ test("sort-only merge corrects independently renamed source arrays without renum
 });
 
 test("provider names and flags do not contaminate country, category or prefix identity", () => {
+    assert.deepEqual(splitPrefix("香港 | 美国 01"), { prefix: "香港", body: "美国 01" });
+    assert.deepEqual(splitPrefix("香港 | IPLC 01"), { prefix: "", body: "香港 | IPLC 01" });
     assert.deepEqual(describeName("🇭🇰 IPLC 机场 | 香港 01"), {
         country: "香港",
         prefix: "IPLC 机场",
