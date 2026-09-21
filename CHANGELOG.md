@@ -1,5 +1,11 @@
 # Changelog
 
+## [3.1.0](https://github.com/Lumintian/override-rules/compare/src-v3.0.1...src-v3.1.0) (2026-09-21)
+
+
+### Refactoring
+
+- Stop inferring source prefixes ([0894c4c](https://github.com/Lumintian/override-rules/commit/0894c4c7d6f22ab88acef0051c24341acf44d7ce))
 ## [3.0.1](https://github.com/Lumintian/override-rules/compare/src-v3.0.0...src-v3.0.1) (2026-09-21)
 
 
