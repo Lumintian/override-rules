@@ -1,5 +1,11 @@
 # Changelog
 
+## [3.1.1](https://github.com/Lumintian/override-rules/compare/src-v3.1.0...src-v3.1.1) (2026-09-22)
+
+
+### Bug Fixes
+
+- Match the 中转 in blkey precisely ([2fb0b93](https://github.com/Lumintian/override-rules/commit/2fb0b9388078d7633553bb3c1a968be9960fb9e0))
 ## [3.1.0](https://github.com/Lumintian/override-rules/compare/src-v3.0.1...src-v3.1.0) (2026-09-21)
 
 
