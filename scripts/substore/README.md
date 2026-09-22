@@ -78,7 +78,7 @@ https://cdn.jsdelivr.net/gh/Lumintian/override-rules@dist/sort.min.js
 | `flag` | 在名称前添加国旗；纯国旗输出不重复添加 |
 | `blgd` | 保留常见线路标签；家宽规范为 `Fam`，多个标签可以同时保留 |
 | `bl` | 保留数值倍率；1 与 1.0 都不显示倍率标签 |
-| `blkey=A+B>C` | 保留关键词，也可按规则替换；多个命中分别保留 |
+| `blkey=A+B>C` | 保留关键词，也可按规则替换；多个命中分别保留。`中转` 与 `中转A..Z` 按完整中转标签精确匹配，互不误命中 |
 | `nx` | 仅保留倍率为 1 或未标倍率的节点 |
 | `blnx` | 仅保留明确倍率大于 1 的节点 |
 | `nm` | 保留无法识别地区的节点并置底；未开启则移除 |
@@ -88,7 +88,7 @@ https://cdn.jsdelivr.net/gh/Lumintian/override-rules@dist/sort.min.js
 | `fgf=` | 名称字段分隔符，默认空格 |
 | `sn=` | baseName 与序号的分隔符，默认空格 |
 | `clear` | 清理套餐、到期、剩余流量、官网等明确的信息节点 |
-| `chain` | 按原名称或 `blkey` 输出标签中的“中转”或“中转A..Z”写入 `dialer-proxy: 前置代理` 或对应字母组；两处标签冲突或已有不同引用时明确报错 |
+| `chain` | 按原名称或 `blkey` 输出标签中的“中转”或“中转A..Z”写入 `dialer-proxy: 前置代理` 或对应字母组；同一名称出现多个不同中转标签、标签映射冲突或已有不同引用时明确报错 |
 | `blpx` | 已无须传入；新排序始终执行，此参数不再控制排序 |
 | `blockquic=on/off` | 显式设置 block-quic；不传时保留原字段 |
 

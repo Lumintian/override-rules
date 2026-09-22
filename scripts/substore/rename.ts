@@ -28,7 +28,7 @@ import type { NameFormat } from "../../shared/regions";
  * name/nf: 显式名称前缀 / 前缀放在国旗之前；不从原节点名推断来源前缀。
  * fgf/sn: 名称字段 / 编号分隔符，默认空格。
  * flag/one: 添加国旗 / 单个 baseName 不显示 01。
- * bl/blgd/blkey: 保留倍率 / 固定标签 / 自定义标签（+ 分隔，> 替换）。
+ * bl/blgd/blkey: 保留倍率 / 固定标签 / 自定义标签（+ 分隔，> 替换）；中转族按完整标签匹配。
  * nx/blnx: 仅保留 1x 或未标倍率 / 仅保留 >1x；倍率按数值判断。
  * clear/nm: 清理信息节点 / 保留无法识别地区的节点并置底。
  * blpx: 不再需要，排序默认执行；权重在 shared/preferences.ts 中统一配置。
@@ -144,20 +144,34 @@ function text(value: string | boolean | undefined, fallback = ""): string {
     }
 }
 
+function canonicalTransitTag(value: string): string | null {
+    const match = value.normalize("NFKC").match(/^中转\s*([A-Za-z])?$/i);
+    return match ? `中转${(match[1] ?? "").toUpperCase()}` : null;
+}
+
+function readTransitTags(name: string): string[] {
+    return Array.from(
+        name.normalize("NFKC").matchAll(/中转\s*([A-Za-z])?(?=$|[^A-Za-z0-9])/gi),
+        (match) => `中转${(match[1] ?? "").toUpperCase()}`
+    );
+}
+
 function customTags(name: string, expression: string): string[] {
+    const transitTags = new Set(readTransitTags(name));
     return expression
         .split("+")
         .flatMap((rule) => {
             const [match, ...replacement] = rule.split(">");
-            if (!match || !name.includes(match)) return [];
+            if (!match) return [];
+            const transitTag = canonicalTransitTag(match);
+            if (transitTag ? !transitTags.has(transitTag) : !name.includes(match)) return [];
             return [replacement.length ? replacement.join(">") : match];
         })
         .filter(Boolean);
 }
 
-function transitGroup(name: string): string | null {
-    const match = name.normalize("NFKC").match(/中转\s*([A-Za-z])?(?=$|[^A-Za-z0-9])/i);
-    return match ? `前置代理${(match[1] ?? "").toUpperCase()}` : null;
+function transitGroups(name: string): string[] {
+    return readTransitTags(name).map((tag) => `前置代理${tag.slice("中转".length)}`);
 }
 
 export function renameNodes(proxies: readonly RenameProxy[], args: RenameArgs = {}): RenameProxy[] {
@@ -213,9 +227,7 @@ export function renameNodes(proxies: readonly RenameProxy[], args: RenameArgs = 
         }
 
         if (enabled(args.chain)) {
-            const targets = [transitGroup(rawName), ...labels.map(transitGroup)].filter(
-                (target): target is string => target !== null
-            );
+            const targets = [rawName, ...labels].flatMap(transitGroups);
             const uniqueTargets = [...new Set(targets)];
             if (uniqueTargets.length > 1) {
                 throw new Error(

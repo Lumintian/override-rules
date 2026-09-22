@@ -30,7 +30,7 @@ const 默认预设 = "df";
 const 预设 = {
     df: {
         name: "默认 |",
-        blkey: "Legend+Zouter+Dmit+Azure+V6+中转A",
+        blkey: "Legend+Zouter+Dmit+Azure+V6+中转+中转A+中转B+中转C",
         // 替换示例：blkey: "Legend+Zouter>中转+Azure",
         // blgd: true,
         // nm: true,
@@ -115,6 +115,8 @@ globalThis.operator = operator;
 普通同名参数仍然执行覆写；`blkey_add` 则执行补充。如果同时传入 `blkey` 和 `blkey_add`，会先用 URL 中的 `blkey` 覆写预设，再追加 `blkey_add`。
 
 `blkey` 与 `blkey_add` 都使用原生规则语法：`+` 分隔规则，`匹配词>输出标签` 执行标签替换。`blkey_add` 只是追加规则；如果预设中已经存在同一个匹配词，原规则与补充规则都会生效。需要替换或删除已有规则时，应使用 `blkey` 完整覆写。
+
+包装脚本会先合并最终的 `blkey` 与 `blkey_add`，再交给重命名脚本统一匹配。普通关键词仍按子串追加命中；`中转` 与 `中转A..Z` 按完整中转标签精确匹配，因此同时配置 `中转+中转A+中转B` 时，名称中的 `中转A` 只命中 `中转A`。如果原名称或替换结果确实给出两个不同中转标签，`chain` 仍会明确报错。
 
 `name` 是 rename 唯一使用的来源前缀。原节点名中的 `|` 只作为普通字符参与地区和标签识别，不会被解释为服务商边界；未传 `name` 时不会自动保留原名称中的来源前缀。
 

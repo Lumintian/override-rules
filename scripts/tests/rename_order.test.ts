@@ -118,6 +118,29 @@ test("chain tags assign distinct dialer groups without overwriting conflicts", (
     assert.equal(replaced[0].name, "台湾 中转A");
     assert.equal(replaced[0]["dialer-proxy"], "前置代理A");
 
+    const presetBlkey = "Hytron+中转";
+    const blkeyAdd = "中转A+中转B";
+    const exactTransitTags = renameNodes(
+        [
+            { name: "香港 Hytron 中转" },
+            { name: "台湾 Hytron 中转A" },
+            { name: "新加坡 Hytron 中转B" },
+        ],
+        { chain: true, blkey: [presetBlkey, blkeyAdd].join("+"), one: true }
+    );
+    assert.equal(
+        exactTransitTags.find((node) => node.name === "香港 Hytron 中转")?.["dialer-proxy"],
+        "前置代理"
+    );
+    assert.equal(
+        exactTransitTags.find((node) => node.name === "台湾 Hytron 中转A")?.["dialer-proxy"],
+        "前置代理A"
+    );
+    assert.equal(
+        exactTransitTags.find((node) => node.name === "新加坡 Hytron 中转B")?.["dialer-proxy"],
+        "前置代理B"
+    );
+
     assert.throws(
         () =>
             renameNodes([{ name: "美国 落地 中转B", "dialer-proxy": "前置代理A" }], {
@@ -131,6 +154,10 @@ test("chain tags assign distinct dialer groups without overwriting conflicts", (
                 chain: true,
                 blkey: "禁止直连>中转B",
             }),
+        /chain tag conflict/
+    );
+    assert.throws(
+        () => renameNodes([{ name: "台湾 中转 中转A" }], { chain: true }),
         /chain tag conflict/
     );
 });
@@ -209,6 +236,27 @@ test("custom tags are local to each node and can preserve multiple replacements"
     assert.deepEqual(
         names(renameNodes(proxies(["Hongkong GPT", "Hongkong"]), { blkey: "GPT>AI" })),
         ["香港 AI 01", "香港 01"]
+    );
+    assert.deepEqual(
+        names(
+            renameNodes(proxies(["香港 Azure HK"]), {
+                blkey: "Azure+Azure HK>Cloud",
+                one: true,
+            })
+        ),
+        ["香港 Azure Cloud"]
+    );
+
+    const presetBlkey = "中转A>线路A";
+    const blkeyAdd = "中转A>备用";
+    assert.deepEqual(
+        names(
+            renameNodes(proxies(["香港 中转A"]), {
+                blkey: [presetBlkey, blkeyAdd].join("+"),
+                one: true,
+            })
+        ),
+        ["香港 线路A 备用"]
     );
 });
 
