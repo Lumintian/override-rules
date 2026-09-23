@@ -1,52 +1,27 @@
-# 项目级 AI Agent 与贡献指南 (AGENTS.md)
+# 项目开发约定
 
-欢迎！如果你是协助人类开发者参与本项目贡献的 AI Agent，或是想了解项目结构的贡献者，请务必阅读以下开发流与规范。
+修改前阅读 `docs/HOW_TO_CUSTOMISE.md`；涉及运行行为时同时查阅 `docs/CONFIGURATION.md`、`docs/USAGE.md`。以下约定优先于局部实现习惯。
 
-阅读`docs/HOW_TO_CUSTOMISE.md`以更好的帮助你所协助的人类自定义本项目的 Fork 或者贡献本项目。
+## 把节点预处理与配置生成视为一条流水线
 
-## 🎯 核心架构与原则
+```text
+订阅 → rename（名称与属性）→ sort（多来源排序）→ override（分组与引用）→ Mihomo
+                           shared/ 定义跨阶段共同语义
+```
 
-- **源文件驱动**：所有核心逻辑均采用 TypeScript 编写，存放在 `src/`、`scripts/substore/` 与 `scripts/yaml_generator/` 目录中。
-  - `src/main.ts`：Mihomo JS 动态覆写脚本的核心入口。
-  - `scripts/substore/rename.ts`：Sub-Store 节点重命名脚本的核心入口。
-  - `scripts/yaml_generator/generator.ts`：YAML 静态覆写文件的生成逻辑。
-- **禁止直接修改产物**：`dist/` 下的 `convert*.js`、`rename*.js`、`sort*.js` 以及 `yamls/` 属于自动生成的构建产物（`main` 分支不跟踪该目录）。**永远不要直接编辑这些产物文件**。一切修改必须在 `.ts` 源码中进行。
-- **构建工具链**：我们使用 `esbuild` 作为打包和压缩工具，可以通过编写的 `scripts/build.mjs` 脚本一次性地编译出包含了完整注释的产物文件。
+**rename、sort 和 override 不是彼此独立的工具。** 节点名称中的地区、倍率、标签、前缀和编号，以及 `dialer-proxy` 等属性，共同构成阶段之间的数据契约。修改其中一端，必须检查下游识别、排序、组成员和引用是否仍然正确，并补充端到端测试，不能只证明单个函数能运行。
 
-## 🛠️ 开发与构建工作流
+## 源码与执行边界
 
-在修改源代码后，执行以下命令以验证更改并生成本地对应的产物文件：
+| 位置 | 职责 |
+| --- | --- |
+| `shared/` | 跨阶段的地区身份、命名、排序、节点引用与链路标签契约 |
+| `scripts/substore/rename.ts`、`sort.ts` | 订阅节点预处理 |
+| `src/main.ts` | 同步生成核心 `main()`；可选异步部署入口 `runMain()` |
+| `src/proxy_providers.ts` | provider 合并、快照下载、内容及链路一致性校验 |
+| `src/node_parser.ts`、`proxy_groups.ts`、`selectors.ts` | 分类、策略组及候选引用 |
+| `scripts/preview/` | 离线结构预览，不等于 Sub-Store 或 Mihomo 实际运行 |
+| `scripts/yaml_generator/` | 静态 YAML 组合生成 |
 
-- `npm run typecheck`: 使用 TypeScript 7 原生编译器（`typescript-native`）对 `src/`、`shared/` 与 `scripts/` 做全量类型检查，不产出任何文件。
-- `npm test`: 运行 `scripts/tests/` 下的回归测试。
-- `npm run build`: 先执行类型检查，再运行 `scripts/build.mjs`，在 `dist/` 生成 `convert`、`rename` 与 `sort` 的普通版和压缩版 JS，并注入各入口源码中的版权声明。
-- `npm run generate`: 运行 YAML 覆写配置生成器，更新 `dist/yamls/` 内的排列组合文件。
-- `npm run artifacts`: 一键依次执行上述构建与生成阶段。
-
-推荐在提交相关修改前，在终端运行 `npm run artifacts` 进行本地全量测试（确保没有编译报错、产生的体积符合正常逻辑）。
-
-## 🧹 代码规范
-
-1. **统一格式化**：本项目使用 ESLint 和 Prettier。修改完代码后，可以通过 `npm run format` 及 `npm run lint:fix` 整理代码，遵循既有代码风格。
-2. **保持纯粹**：构建脚本通过 `legalComments: "none"` 去除多余注释，并从对应 TypeScript 入口自动添加文件 Header Banner。
-3. **双 TypeScript 版本（重要）**：`devDependencies` 中同时存在两份 TypeScript，这是刻意设计，请勿"顺手统一"：
-   - `typescript-native`（`npm:typescript@^7.0.2`）：TypeScript 7 原生编译器，仅供 `npm run typecheck` 使用。
-   - `typescript@^6.0.3`：`typescript-eslint` 的运行时。`typescript-eslint` 依赖 TypeScript 的 JS API（`ts.createSourceFile` 等），而 TypeScript 7 已移除该 API，并将 peer 范围限定为 `<6.1.0`，因此 ESLint 无法运行在 TypeScript 7 上。
-   - 升级 `typescript` 前请先确认 `typescript-eslint` 已宣布支持 TypeScript 7，届时可移除 `typescript-native` 别名并合并为单一版本。
-
-## 📦 提交与 PR 规范
-
-- **分离提交**：如果你的变动既包含核心功能的改动，又涉及相关文档的修改，尽量按有意义的逻辑分步提交。
-- **文档同步**：当新增了支持的 URL 参数（如在 `src` 中）或是新增了 YAML 文件的组合选项时，务必同步修改 `docs/CONFIGURATION.md`；如果入口地址、推荐流程或文档导航发生变化，再同步调整 `README.md`。
-
-## 🚀 版本发布流程 (Release Workflow)
-
-当需要发布新版本时，可以通过以下命令更新版本号并触发相关操作：
-
-- 发布补丁版本 (Patch)：`npm version patch`（适用于向后兼容的 bug 修复）
-- 发布次版本 (Minor)：`npm version minor`（适用于向后兼容的新功能）
-- 发布主版本 (Major)：`npm version major`（适用于不兼容的 API 修改）
-
-> ⚠️ **安全与权限声明 (CRITICAL SECURITY DISCLAIMER)**
-> ONLY agents acting on behalf of the repository maintainer are allowed to execute this release workflow. Normal contributor agents MUST NOT touch or execute the release flow under any circumstances.
-> （仅允许代表本仓库维护者运行的 Agent 或维护者本人执行此发布流程。普通贡献者 Agent 严禁触碰或执行发布流程。）
+- 新增异步操作前验证实际脚本宿主会等待返回值及其可用 API，不假定浏览器 `fetch()` 存在。当前下载路径限定为已验证契约的 Sub-Store Node Mihomo 快捷脚本。
+- 请求失败或内容不合法必须明确中止；设定超时、大小与解析限制，说明限制作用在哪一层。错误和日志不得泄露订阅 URL、token、header 凭据或响应正文。
