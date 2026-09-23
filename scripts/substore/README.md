@@ -2,6 +2,8 @@
 
 本目录维护与 Mihomo 覆写配套的两个节点操作：`rename` 负责单个来源的规范化、地区/类别排序和编号；`sort` 负责多个来源合并后的地区/来源/类别排序。两个入口与 `convert` 共享 [`shared/preferences.ts`](../../shared/preferences.ts) 的地区和类别偏好；来源前缀只在合并后的 `sort` / `convert` 阶段参与排序。
 
+**要配置 providerurl + 前置代理？** 先按 [README 完整示例](../../README.md#providerurl-与前置代理完整示例) 完成整条流程，本页仅用于查 rename / sort 参数。不要在节点导出来源上再执行 convert，也不要把主配置链接填进 providerurl。
+
 完整的算法约定、可配置权重与边界见 [节点排序与命名约定](../../docs/NODE_ORDERING.md)。
 
 ## 源码与构建
@@ -20,7 +22,7 @@ npm run build
 
 ## 单一来源
 
-在 Sub-Store 的节点处理流程中添加脚本操作，先重命名，后进行配置覆写：
+普通显式节点模式下，在 Sub-Store 的节点处理流程中添加脚本操作，先重命名，后进行配置覆写：
 
 ```text
 原始订阅 → rename.min.js → convert.min.js → Mihomo 配置
@@ -100,13 +102,20 @@ rename 阶段按“地区 → 类别”逐层成块，同层级保持源顺序�
 
 rename 与 override 共同使用 [`shared/chain_tags.ts`](../../shared/chain_tags.ts) 定义的 `中转 / 中转A…Z` → `前置代理 / 前置代理A…Z` 映射。标签标记需要前置代理的落地节点，不是前置候选。
 
-`chain` 根据原始名或替换标签设置 `dialer-proxy`，**不自动保留最终名称的标签**。如果输出要作为动态 provider 来源，必须同时保留对应 `blkey`：
+下面两项分别负责不同的事，不能只设置其中一项：
+
+| rename 参数 | 作用 |
+| --- | --- |
+| `chain` | 根据中转标签设置节点的 `dialer-proxy` 属性 |
+| `blkey` | 在最终名称里保留中转标签，让 Mihomo 更新后仍能识别链路 |
+
+如果输出要作为动态 provider 来源，默认、A、B 三条链路可用：
 
 ```text
 rename.min.js#chain&blkey=中转+中转A+中转B
 ```
 
-按实际链路补齐到 Z；不要将标签替换为其他词，也不要用空编号分隔符把 `中转A` 拼成 `中转A01`。最终标签应无内部空格，字母使用半角；默认空格分隔符适用。override 会校验快照最终名称与拨号属性的一致性，运行时使用相同标签动态分组，而不依赖易变的编号。
+只保留你实际使用的链路标签即可，需要时可扩展到 Z；它们标记落地节点，普通前置节点不加。不要将标签替换为其他词，也不要用空编号分隔符把 `中转A` 拼成 `中转A01`。最终标签应无内部空格，字母使用半角；默认空格分隔符适用。override 会校验快照最终名称与拨号属性的一致性，运行时使用相同标签动态分组，而不依赖易变的编号。
 
 保证每次 provider 更新仍从同一预处理流程输出；只在生成主配置时修改快照名称不会影响 Mihomo 后续下载。更新边界及混合模式见 [provider 链式代理](../../docs/CONFIGURATION.md#provider-链式代理)。
 
