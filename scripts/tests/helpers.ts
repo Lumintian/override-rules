@@ -38,6 +38,12 @@ export function assertValidReferences(config: ClashConfig): void {
         ...(config["proxy-groups"] ?? []).map((group) => group.name),
     ]);
     for (const group of config["proxy-groups"] ?? []) {
+        for (const provider of group.use ?? []) {
+            assert.ok(
+                Object.hasOwn(config["proxy-providers"] ?? {}, provider),
+                `${group.name} references missing provider: ${provider}`
+            );
+        }
         for (const name of group.proxies ?? []) {
             assert.ok(names.has(name), `${group.name} references missing proxy: ${name}`);
             assert.notEqual(name, group.name, `${group.name} references itself`);

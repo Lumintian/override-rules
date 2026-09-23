@@ -33,6 +33,8 @@ export interface ScriptArgs extends Partial<Record<CountryCode, string>> {
     regex?: string;
     threshold?: string;
     tun?: string;
+    providerurl?: string;
+    providerinterval?: string;
 }
 
 export type GroupType = 0 | 1 | 2;
@@ -68,6 +70,7 @@ export interface BaseProxyGroup {
     icon?: string;
     proxies?: string[];
     "include-all"?: boolean;
+    use?: string[];
     filter?: string;
     "exclude-filter"?: string;
 }
@@ -171,8 +174,18 @@ export interface ClashProfile {
     "store-fake-ip"?: boolean;
 }
 
+export interface ProxyProvider {
+    type: "http" | "file" | "inline";
+    url?: string;
+    path?: string;
+    interval?: number;
+    payload?: ProxyNode[];
+    [key: string]: unknown;
+}
+
 export interface ClashConfig {
     proxies?: ProxyNode[];
+    "proxy-providers"?: Record<string, ProxyProvider>;
     /** Mihomo 根级 hosts 映射。 */
     hosts?: Record<string, string | string[]>;
     "proxy-groups"?: ProxyGroup[];
@@ -239,10 +252,16 @@ export interface BuildCountryGroupsInput {
     countryNodes: Record<string, ProxyNode[]>;
     countryExtraCounts: Record<string, number>;
     excludedNodeNames: string[];
+    providerNames?: string[];
+    explicitCountryNodes?: Record<string, ProxyNode[]>;
 }
 
 export interface BuildProxyGroupsInput {
     manualNodes: string[];
+    providerNames?: string[];
+    /** Only snapshot-validated providers may supply front/landing chain candidates. */
+    chainProviderNames?: string[];
+    frontCountryNamesByChain?: Record<string, string[]>;
     countryNames: string[];
     countryGroups: ProxyGroup[];
     landingChains: LandingChain[];

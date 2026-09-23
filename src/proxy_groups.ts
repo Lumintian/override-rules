@@ -7,6 +7,34 @@ import type {
     ProxyGroup,
 } from "./types";
 import { isNotNull } from "./utils";
+import { TRANSIT_PATTERN, transitPattern } from "../shared/chain_tags";
+
+function excludeProviderLandings(patterns: Array<string | undefined> = []): string {
+    return `(?i)${[TRANSIT_PATTERN, ...patterns]
+        .filter(Boolean)
+        .map((pattern) => `(?:${pattern})`)
+        .join("|")}`;
+}
+
+function providerFrontSource(
+    providerNames: string[],
+    countries?: string[]
+): Pick<ProxyGroup, "use" | "filter" | "exclude-filter"> {
+    if (providerNames.length === 0) return {};
+    const meta = countries?.map((country) => countriesMeta[country]).filter(Boolean);
+    return {
+        use: providerNames,
+        ...(meta && {
+            filter:
+                meta.length > 0
+                    ? `(?i)${meta.map(({ pattern }) => `(?:${pattern})`).join("|")}`
+                    : "^$",
+        }),
+        "exclude-filter": excludeProviderLandings(
+            meta?.map(({ excludePattern }) => excludePattern)
+        ),
+    };
+}
 
 function escapeRegex(value: string): string {
     return value.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
@@ -16,7 +44,7 @@ interface BuildGroupByTypeInput {
     name: string;
     icon: string;
     groupType: GroupType;
-    nodeSource: Pick<ProxyGroup, "proxies" | "include-all" | "filter" | "exclude-filter">;
+    nodeSource: Pick<ProxyGroup, "proxies" | "use" | "include-all" | "filter" | "exclude-filter">;
 }
 
 /**
@@ -68,28 +96,39 @@ export function buildCountryGroups({
     countryNodes,
     countryExtraCounts,
     excludedNodeNames,
+    providerNames = [],
+    explicitCountryNodes = providerNames.length > 0 ? {} : countryNodes,
 }: BuildCountryGroupsInput): ProxyGroup[] {
     return getActiveCountryNames(countryNodes, 1).flatMap((country) => {
         const meta = countriesMeta[country];
-        const nodeSource: BuildGroupByTypeInput["nodeSource"] = regexFilter
-            ? {
-                  "include-all": true,
-                  filter: meta.pattern,
-                  ...(excludedNodeNames.length > 0
-                      ? {
-                            "exclude-filter": [
-                                ...excludedNodeNames.map((name) => `^${escapeRegex(name)}$`),
-                                meta.excludePattern,
-                            ]
-                                .filter(Boolean)
-                                .map((pattern) => `(?:${pattern})`)
-                                .join("|"),
-                        }
-                      : meta.excludePattern
-                        ? { "exclude-filter": meta.excludePattern }
-                        : {}),
-              }
-            : { proxies: countryNodes[country].map((node) => node.name).filter(isNotNull) };
+        const nodeSource: BuildGroupByTypeInput["nodeSource"] =
+            providerNames.length > 0
+                ? {
+                      // Never enumerate snapshot names: only providers supply their runtime members.
+                      proxies: (explicitCountryNodes[country] ?? []).map((node) => node.name),
+                      use: providerNames,
+                      filter: `(?i)${meta.pattern}`,
+                      "exclude-filter": excludeProviderLandings([meta.excludePattern]),
+                  }
+                : regexFilter
+                  ? {
+                        "include-all": true,
+                        filter: meta.pattern,
+                        ...(excludedNodeNames.length > 0
+                            ? {
+                                  "exclude-filter": [
+                                      ...excludedNodeNames.map((name) => `^${escapeRegex(name)}$`),
+                                      meta.excludePattern,
+                                  ]
+                                      .filter(Boolean)
+                                      .map((pattern) => `(?:${pattern})`)
+                                      .join("|"),
+                              }
+                            : meta.excludePattern
+                              ? { "exclude-filter": meta.excludePattern }
+                              : {}),
+                    }
+                  : { proxies: countryNodes[country].map((node) => node.name).filter(isNotNull) };
         const groups: ProxyGroup[] = [];
         if (countryNames.includes(country)) {
             groups.push(
@@ -121,6 +160,9 @@ export function buildCountryGroups({
  */
 export function buildProxyGroups({
     manualNodes,
+    providerNames = [],
+    chainProviderNames = [],
+    frontCountryNamesByChain = {},
     countryNames,
     countryGroups,
     tailscaleNodes,
@@ -133,6 +175,7 @@ export function buildProxyGroups({
     const hasTW = countryNames.includes("台湾");
     const hasHK = countryNames.includes("香港");
     const hasTailscale = tailscaleNodes.length > 0;
+    const hasManualNodes = manualNodes.length > 0 || providerNames.length > 0;
     const countryGroupNames = (country: string): string[] =>
         countryGroups
             .filter(
@@ -147,12 +190,13 @@ export function buildProxyGroups({
             type: "select",
             proxies: defaultSelector,
         },
-        manualNodes.length > 0
+        hasManualNodes
             ? {
                   name: PROXY_GROUPS.MANUAL,
                   icon: `${CDN_URL}/gh/shindgewongxj/WHATSINStash@master/icon/select.png`,
                   type: "select",
                   proxies: manualNodes,
+                  ...(providerNames.length > 0 && { use: providerNames }),
               }
             : null,
         {
@@ -172,13 +216,23 @@ export function buildProxyGroups({
                 name: chain.frontGroupName,
                 icon: `${CDN_URL}/gh/Koolson/Qure@master/IconSet/Color/Area.png`,
                 type: "select",
-                proxies: frontProxySelectors[chain.id] ?? ["DIRECT"],
+                // Explicit proxies precede use members in Mihomo. Do not put DIRECT ahead of
+                // dynamic fronts; an empty dynamic group uses Mihomo's own fallback instead.
+                proxies:
+                    chainProviderNames.length > 0
+                        ? (frontProxySelectors[chain.id] ?? []).filter((name) => name !== "DIRECT")
+                        : (frontProxySelectors[chain.id] ?? ["DIRECT"]),
+                ...providerFrontSource(chainProviderNames, frontCountryNamesByChain[chain.id]),
             },
             {
                 name: chain.landingGroupName,
                 icon: `${CDN_URL}/gh/Koolson/Qure@master/IconSet/Color/Airport.png`,
                 type: "select",
                 proxies: chain.nodes.map((node) => node.name).filter(isNotNull),
+                ...(chainProviderNames.length > 0 && {
+                    use: chainProviderNames,
+                    filter: `(?i)${transitPattern(chain.id)}`,
+                }),
             },
         ]),
         {
@@ -264,7 +318,7 @@ export function buildProxyGroups({
                 ? [
                       ...countryGroupNames("台湾"),
                       PROXY_GROUPS.SELECT,
-                      ...(manualNodes.length > 0 ? [PROXY_GROUPS.MANUAL] : []),
+                      ...(hasManualNodes ? [PROXY_GROUPS.MANUAL] : []),
                       "DIRECT",
                   ]
                 : defaultProxies,

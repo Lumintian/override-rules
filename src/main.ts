@@ -14,6 +14,8 @@ https://github.com/Lumintian/override-rules
 - quic: 允许 QUIC 流量（UDP 443，默认 false）
 - threshold: 地区节点数量小于该值时不显示基础地区组；已生成基础或额外组的地区不再重复列入手动选择 (默认 2，不影响额外组)
 - regex: 使用正则过滤模式（include-all + filter）写入基础及额外地区组，而非直接枚举节点名称（默认 false）
+- providerurl: encodeURIComponent 编码的 Mihomo YAML/JSON 订阅 URL；生成时下载快照，运行时通过 provider 动态更新（仅 Sub-Store Node 异步快捷脚本）
+- providerinterval: 新建 provider 的更新周期，60–604800 秒（默认 3600）；已有同源 provider 保持原设置
 - hk/mo/tw/sg/jp/kr/us/ca/uk/au/de/fr/ru/th/in/my/ar/fi/eg/ph/tr/ua: 对应地区额外 select 组数量（0–100 的整数，默认 0；非法值视为 0），如 us=2&sg=1；无对应地区节点时不生成
 
 源码位于 `src/*.ts`。
@@ -35,7 +37,15 @@ import { ruleProviders } from "./rule_providers";
 import { buildDns, snifferConfig } from "./dns";
 import { buildTunConfig } from "./tun";
 import { buildBaseLists } from "./selectors";
-import type { ClashConfig, ScriptArgs } from "./types";
+import type { ClashConfig, ProxyNode, ScriptArgs } from "./types";
+import {
+    downloadSnapshot,
+    getProxyProviders,
+    prepareProvider,
+    snapshotHeaders,
+    subStoreRuntime,
+    validateSnapshotChains,
+} from "./proxy_providers";
 
 const geoxURL = {
     geoip: `${CDN_URL}/gh/MetaCubeX/meta-rules-dat@release/geoip.dat`,
@@ -54,7 +64,12 @@ function getRawArgs(): ScriptArgs {
     }
 }
 
-export function main(config: ClashConfig, args: ScriptArgs = getRawArgs()): ClashConfig {
+/** Synchronous generation core. Snapshot nodes affect structure only, never output proxies. */
+export function main(
+    config: ClashConfig,
+    args: ScriptArgs = getRawArgs(),
+    snapshotNodes: ProxyNode[] = []
+): ClashConfig {
     const {
         groupType,
         ipv6Enabled,
@@ -68,16 +83,50 @@ export function main(config: ClashConfig, args: ScriptArgs = getRawArgs()): Clas
         countryExtraCounts,
         frontCountryNamesByChain,
     } = buildFeatureFlags(args);
-    if (!config.proxies || !Array.isArray(config.proxies)) {
-        throw new Error("[override-rules] 错误：Clash 配置中缺少有效的 proxies 字段");
+    const providers = getProxyProviders(config);
+    const providerNames = Object.keys(providers);
+    if (snapshotNodes.length > 0 && providerNames.length === 0) {
+        throw new Error("[override-rules] 快照必须关联 proxy-provider，不能直接作为显式节点输出。");
     }
-    // Order the merged collection once before deriving every explicit candidate list.
-    const proxies = sortProxyNodes(config.proxies);
+    if (
+        (config.proxies !== undefined && !Array.isArray(config.proxies)) ||
+        (config.proxies === undefined && providerNames.length === 0)
+    ) {
+        throw new Error(
+            "[override-rules] 错误：配置需包含有效的 proxies 数组或非空 proxy-providers"
+        );
+    }
+    // Only explicit nodes enter output and name-based selectors.
+    const proxies = sortProxyNodes(config.proxies ?? []);
+    validateSnapshotChains(snapshotNodes);
+    // Only this source has been checked for name/dialer consistency. Unknown providers must not
+    // enter a front group: an unlabelled dialer or provider override could create a cycle.
+    const snapshotProvider =
+        snapshotNodes.length > 0
+            ? Object.entries(providers).find(
+                  ([, provider]) => provider.type === "http" && provider.url === args.providerurl
+              )
+            : undefined;
+    if (snapshotNodes.length > 0 && !snapshotProvider) {
+        throw new Error("[override-rules] 快照必须关联 providerurl 对应的 HTTP provider。");
+    }
+    const chainProviderNames = snapshotProvider ? [snapshotProvider[0]] : [];
     const parsedLanding = parseNodesByLanding(proxies);
+    const parsedSnapshot = parseNodesByLanding(snapshotNodes);
+    // Preserve legacy explicit-only activation. Provider mode always creates known dialer targets,
+    // including when only the snapshot supplies the fronts or the current front selection is empty.
     const landingChains =
-        parsedLanding.nonLandingNodes.length > 0 ? parsedLanding.landingChains : [];
+        providerNames.length > 0
+            ? parseNodesByLanding([...proxies, ...snapshotNodes]).landingChains.map((chain) => ({
+                  ...chain,
+                  nodes: parsedLanding.landingChains.find(({ id }) => id === chain.id)?.nodes ?? [],
+              }))
+            : parsedLanding.nonLandingNodes.length > 0
+              ? parsedLanding.landingChains
+              : [];
     const nonLandingNodes = landingChains.length > 0 ? parsedLanding.nonLandingNodes : proxies;
-    const countryNodes = parseCountries(nonLandingNodes);
+    const explicitCountryNodes = parseCountries(nonLandingNodes);
+    const countryNodes = parseCountries([...nonLandingNodes, ...parsedSnapshot.nonLandingNodes]);
     const countryNames = getActiveCountryNames(countryNodes, countryThreshold);
     const countryGroups = buildCountryGroups({
         regexFilter,
@@ -85,6 +134,8 @@ export function main(config: ClashConfig, args: ScriptArgs = getRawArgs()): Clas
         countryNames,
         countryNodes,
         countryExtraCounts,
+        providerNames,
+        explicitCountryNodes,
         excludedNodeNames: landingChains.flatMap((chain) =>
             chain.nodes.map((node) => node.name).filter(Boolean)
         ),
@@ -107,14 +158,17 @@ export function main(config: ClashConfig, args: ScriptArgs = getRawArgs()): Clas
         buildBaseLists({
             landingChains,
             countryGroups,
-            countryNodes,
+            countryNodes: explicitCountryNodes,
             nonLandingNodes,
             frontCountryNamesByChain,
-            hasManualNodes: manualNodes.length > 0,
+            hasManualNodes: manualNodes.length > 0 || providerNames.length > 0,
         });
 
     const proxyGroups = buildProxyGroups({
         manualNodes,
+        providerNames,
+        chainProviderNames,
+        frontCountryNamesByChain,
         countryNames,
         countryGroups,
         tailscaleNodes,
@@ -132,12 +186,14 @@ export function main(config: ClashConfig, args: ScriptArgs = getRawArgs()): Clas
         // Explicit names preserve shared ordering; include-all may reorder dynamically.
         type: "select",
         proxies: [...globalProxies, ...allNodes],
+        ...(providerNames.length > 0 && { use: providerNames }),
     });
 
     const finalRules = buildRules({ quicEnabled }, hasTailscale);
 
     return {
         proxies,
+        ...(config["proxy-providers"] !== undefined && { "proxy-providers": providers }),
         ...(config.hosts !== undefined && { hosts: config.hosts }),
         ...(fullConfig && {
             "mixed-port": 7890,
@@ -168,4 +224,23 @@ export function main(config: ClashConfig, args: ScriptArgs = getRawArgs()): Clas
     };
 }
 
-(globalThis as Record<string, unknown>).main = main;
+/** Keep the old synchronous return path when no download was requested. */
+export function runMain(
+    config: ClashConfig,
+    args: ScriptArgs = getRawArgs()
+): ClashConfig | Promise<ClashConfig> {
+    if (args.providerurl === undefined) {
+        if (args.providerinterval !== undefined) {
+            throw new Error("[override-rules] providerinterval 必须与 providerurl 一起使用。");
+        }
+        return main(config, args);
+    }
+    const runtime = subStoreRuntime();
+    const prepared = prepareProvider(config, args);
+    const headers = snapshotHeaders(prepared, args.providerurl);
+    return downloadSnapshot(args.providerurl, runtime, headers).then((nodes) =>
+        main(prepared, args, nodes)
+    );
+}
+
+(globalThis as Record<string, unknown>).main = runMain;
