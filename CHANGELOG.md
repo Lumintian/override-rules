@@ -1,5 +1,24 @@
 # Changelog
 
+## [3.2.0](https://github.com/Lumintian/override-rules/compare/src-v3.1.1...src-v3.2.0) (2026-09-23)
+
+
+### Documentation
+
+- Add a specific example ([00c682c](https://github.com/Lumintian/override-rules/commit/00c682c0c2519a017a0951c470137c9ea485d39d))
+- Emphasize pipeline contracts and runtime safety ([f0b1213](https://github.com/Lumintian/override-rules/commit/f0b1213b9017da6227115c54c774d94aaa2da08f))
+- Explain snapshots and dynamic chain boundaries ([3e40436](https://github.com/Lumintian/override-rules/commit/3e40436f587dbf6b48b34a7fe2ebdbe56ec8dedc))
+
+
+### Features
+
+- Support offline provider-only structure previews ([c0f0715](https://github.com/Lumintian/override-rules/commit/c0f07154d3eb995d98b3ad9e563da91df9ccb955))
+- Support snapshot-backed groups and proxy chains ([1276205](https://github.com/Lumintian/override-rules/commit/1276205b07a1fbd216d47e62ce86f62753d442d0))
+
+
+### Refactoring
+
+- Share transit tag and dialer identity rules ([9da1dcf](https://github.com/Lumintian/override-rules/commit/9da1dcfb0c1e35d87fd255710d529eecc5335172))
 ## [3.1.1](https://github.com/Lumintian/override-rules/compare/src-v3.1.0...src-v3.1.1) (2026-09-22)
 
 
