@@ -13,7 +13,8 @@ import {
 } from "../../src/proxy_providers";
 import type { SnapshotRuntime } from "../../src/proxy_providers";
 import type { ClashConfig, ProxyNode, ScriptArgs } from "../../src/types";
-import { parseArguments } from "../preview/input";
+import { parseArguments, parseInput } from "../preview/input";
+import { PreviewEngine } from "../preview/engine";
 import { assertValidReferences, convert, getGroup } from "./helpers";
 
 const url = "https://subscription.example/provider?token=SECRET%2Fencoded&target=mihomo";
@@ -336,5 +337,46 @@ test("parser exceptions are sanitized and YAML alias expansion is bounded", asyn
                 body: "a: &a [1,2,3]\nb: &b [*a,*a,*a]\nc: &c [*b,*b,*b]\nproxies: [*c,*c,*c]",
             })),
         /别名/
+    );
+});
+
+test("preview accepts provider-only input but does not perform hidden downloads or claim runtime validation", async () => {
+    const content = stringify({ "proxy-providers": { original: { type: "http", url } } });
+    assert.deepEqual(parseInput(content, "auto").config.proxies, []);
+    const engine = new PreviewEngine(path.resolve(__dirname, "../.."));
+    const request = {
+        content,
+        format: "clash" as const,
+        rename: true,
+        renameArgs: "",
+        overrideArgs: "us=1",
+    };
+    const result = await engine.preview(request);
+    assert.deepEqual(result.config["proxy-providers"], { original: { type: "http", url } });
+    assert.equal(result.stats.output, 0);
+    assert.deepEqual(result.members["手动选择"], []);
+    assert.ok(result.warnings.some((warning) => warning.includes("不代表 Mihomo")));
+    assert.ok(!result.warnings.some((warning) => warning.includes("没有保留节点")));
+    const landingPreview = await engine.preview({
+        ...request,
+        rename: false,
+        content: stringify({
+            proxies: [{ ...node("美国 explicit landing"), "dialer-proxy": "前置代理A" }],
+            "proxy-providers": { original: { type: "http", url } },
+        }),
+        overrideArgs: "front_a=hk&us=1",
+    });
+    assert.deepEqual(getGroup(landingPreview.config, "前置代理A").proxies, ["DIRECT"]);
+    assert.equal(getGroup(landingPreview.config, "前置代理A").use, undefined);
+    assert.ok(!landingPreview.config["proxy-groups"]!.some(({ name }) => name === "美国额外1"));
+    assert.ok(
+        !landingPreview.warnings.some((warning) => warning.includes("美国：")),
+        "preview must not count explicit landings as regional candidates in provider mode"
+    );
+    assert.ok(landingPreview.warnings.some((warning) => warning.includes("不加入前置或落地")));
+    await assert.rejects(
+        () =>
+            engine.preview({ ...request, overrideArgs: `providerurl=${encodeURIComponent(url)}` }),
+        /本地预览不下载/
     );
 });

@@ -41,6 +41,11 @@ function matcher(pattern: string): RegExp {
 
 export function resolveMembers(config: ClashConfig, warnings: string[]): Record<string, string[]> {
     const members: Record<string, string[]> = Object.create(null);
+    if (config["proxy-groups"]?.some((group) => group.use?.length)) {
+        warnings.push(
+            "provider 动态成员未下载或模拟；卡片和节点计数仅显示显式节点，不代表 Mihomo 加载、测速或可用性验证通过。"
+        );
+    }
     for (const group of config["proxy-groups"] ?? []) {
         let dynamic = group["include-all"] ? (config.proxies ?? []).map((node) => node.name) : [];
         try {
@@ -118,6 +123,11 @@ export class PreviewEngine {
         const { config: input, namesOnly } = parseInput(request.content, request.format);
         const renameArgs = request.rename ? parseArguments(request.renameArgs, true) : {};
         const overrideArgs = parseArguments(request.overrideArgs);
+        if (overrideArgs.providerurl !== undefined || overrideArgs.providerinterval !== undefined) {
+            throw new Error(
+                "本地预览不下载 providerurl 快照；请移除 providerurl/providerinterval，粘贴 proxy-providers 配置预览引用结构，并在 Sub-Store Node 中验证实际生成。"
+            );
+        }
         const sources = await this.sources(request.rename);
         let renamed: { config: ClashConfig; changes: NameChange[] };
         try {
@@ -154,7 +164,7 @@ export class PreviewEngine {
                 const input = JSON.parse(__input);
                 const config = main(input);
                 const parsedLanding = PreviewCore.parseNodesByLanding(config.proxies);
-                const nodes = parsedLanding.landingChains.length > 0 && parsedLanding.nonLandingNodes.length > 0 ? parsedLanding.nonLandingNodes : config.proxies;
+                const nodes = parsedLanding.landingChains.length > 0 && (parsedLanding.nonLandingNodes.length > 0 || Object.keys(config["proxy-providers"] ?? {}).length > 0) ? parsedLanding.nonLandingNodes : config.proxies;
                 __result = JSON.stringify({ config, countries: PreviewCore.parseCountries(nodes), threshold: PreviewCore.buildFeatureFlags($arguments).countryThreshold, suffix: PreviewCore.NODE_SUFFIX });
             `,
                 renamed.config,
@@ -169,14 +179,16 @@ export class PreviewEngine {
         const nodes = config.proxies ?? [];
         const groups = config["proxy-groups"] ?? [];
         const warnings: string[] = [];
-        if (!nodes.length)
+        if (!nodes.length && input.proxies!.length > 0)
             warnings.push("改名后没有保留节点，请检查改名过滤参数；下方仍显示被移除的原始名称。");
         if (namesOnly)
             warnings.push(
                 "名称模式只预览命名与分组，不包含协议凭据，也无法判断链式代理或 Tailscale 属性。"
             );
         if ("proxy-providers" in input)
-            warnings.push("只处理输入配置的 proxies 数组，不下载或展开 proxy-providers。");
+            warnings.push(
+                "保留 proxy-providers 并生成普通 use 引用；不下载快照，地区及链路结构仅依据显式 proxies，provider 不参与改名，也不加入前置或落地链路组。"
+            );
         if (!namesOnly && nodes.some((node) => !node.type))
             warnings.push(
                 "配置中部分节点缺少 type 等连接信息；这里只展示结构，不保证生成配置可连接。"

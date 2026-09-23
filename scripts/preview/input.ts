@@ -1,5 +1,6 @@
 import { parseDocument } from "yaml";
 import type { ClashConfig, ProxyNode } from "../../src/types";
+import { getProxyProviders } from "../../src/proxy_providers";
 import type { InputFormat, PreviewRequest } from "./types";
 
 export const MAX_INPUT_BYTES = 2 * 1024 * 1024;
@@ -34,7 +35,9 @@ export function parseArguments(text: string, rename = false): Record<string, str
         } catch {
             throw new Error("参数包含无效的百分号编码。");
         }
-        if (!/^[a-z][a-z0-9]*$/i.test(key)) throw new Error("参数名只能包含英文字母和数字。");
+        if (!/^[a-z][a-z0-9_]*$/i.test(key)) {
+            throw new Error("参数名须以英文字母开头，只能包含字母、数字和下划线。");
+        }
         if (rename && BOOLEAN_RENAME_ARGS.has(key)) {
             if (!["", "true", "false", "1", "0"].includes(value.toLowerCase())) {
                 throw new Error(`${key} 需要布尔值 true/false 或 1/0。`);
@@ -75,10 +78,18 @@ export function parseInput(
         } catch {
             throw new Error("Clash 配置包含过多别名引用。");
         }
-        if (!value || typeof value !== "object" || !Array.isArray((value as ClashConfig).proxies)) {
-            throw new Error("Clash 配置必须包含 proxies 数组；暂不展开 proxy-providers 订阅。");
+        if (!value || typeof value !== "object" || Array.isArray(value)) {
+            throw new Error("Clash 配置必须是对象。");
         }
         config = value as ClashConfig;
+        const hasProviders = Object.keys(getProxyProviders(config)).length > 0;
+        if (
+            (config.proxies !== undefined && !Array.isArray(config.proxies)) ||
+            (config.proxies === undefined && !hasProviders)
+        ) {
+            throw new Error("Clash 配置必须包含 proxies 数组或非空 proxy-providers。");
+        }
+        config.proxies ??= [];
     } else {
         config = {
             proxies: text
@@ -88,7 +99,9 @@ export function parseInput(
                 .map((name) => ({ name })),
         };
     }
-    if (!config.proxies!.length) throw new Error("未找到节点。");
+    if (!config.proxies!.length && !Object.keys(getProxyProviders(config)).length) {
+        throw new Error("未找到节点或 provider。");
+    }
     if (config.proxies!.length > MAX_NODES) throw new Error(`预览最多支持 ${MAX_NODES} 个节点。`);
     for (const node of config.proxies!) {
         if (
