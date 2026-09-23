@@ -1,5 +1,6 @@
 import type { CountryMeta } from "./types";
 import { countryWeights } from "../shared/preferences";
+import { FRONT_PROXY_PREFIX } from "../shared/chain_tags";
 
 export const NODE_SUFFIX = "节点";
 export const CDN_URL = "https://cdn.jsdelivr.net";
@@ -10,7 +11,7 @@ export const PROXY_GROUPS = {
     MANUAL: "手动选择",
     STABLE: "稳定代理",
     LANDING: "落地节点",
-    FRONT_PROXY: "前置代理",
+    FRONT_PROXY: FRONT_PROXY_PREFIX,
     STATIC_RESOURCES: "静态资源",
     XAI: "XAI",
     CHATGPT: "ChatGPT",

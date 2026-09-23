@@ -11,6 +11,7 @@ import {
 } from "../shared/node_order";
 import type { NodeOrderMeta } from "../shared/node_order";
 import { splitPrefix } from "../shared/regions";
+import { landingChainId } from "../shared/chain_tags";
 
 const COUNTRY_MATCHERS = Object.entries(countriesMeta).map(([country, meta]) => ({
     country,
@@ -48,12 +49,6 @@ export function sortProxyNodes(nodes: readonly ProxyNode[]): ProxyNode[] {
 
 export function parseTailscale(nodes: ProxyNode[]): ProxyNode[] {
     return (nodes || []).filter((proxy) => proxy.type === "tailscale");
-}
-
-function landingChainId(value: unknown): string | null {
-    if (typeof value !== "string") return null;
-    const match = /^前置代理([A-Z])?$/.exec(value.trim());
-    return match ? (match[1] ?? "").toUpperCase() : null;
 }
 
 /** Nodes dialing through 前置代理 or 前置代理A..Z belong to separate landing chains. */

@@ -18,6 +18,7 @@ import {
     readMultiplier,
 } from "../../shared/node_order";
 import { rewriteDialerReferences } from "../../shared/node_references";
+import { canonicalTransitTag, readTransitTags, transitGroups } from "../../shared/chain_tags";
 import type { NodeOrderMeta } from "../../shared/node_order";
 import { FG, findRegion, regionNames } from "../../shared/regions";
 import type { NameFormat } from "../../shared/regions";
@@ -144,18 +145,6 @@ function text(value: string | boolean | undefined, fallback = ""): string {
     }
 }
 
-function canonicalTransitTag(value: string): string | null {
-    const match = value.normalize("NFKC").match(/^中转\s*([A-Za-z])?$/i);
-    return match ? `中转${(match[1] ?? "").toUpperCase()}` : null;
-}
-
-function readTransitTags(name: string): string[] {
-    return Array.from(
-        name.normalize("NFKC").matchAll(/中转\s*([A-Za-z])?(?=$|[^A-Za-z0-9])/gi),
-        (match) => `中转${(match[1] ?? "").toUpperCase()}`
-    );
-}
-
 function customTags(name: string, expression: string): string[] {
     const transitTags = new Set(readTransitTags(name));
     return expression
@@ -168,10 +157,6 @@ function customTags(name: string, expression: string): string[] {
             return [replacement.length ? replacement.join(">") : match];
         })
         .filter(Boolean);
-}
-
-function transitGroups(name: string): string[] {
-    return readTransitTags(name).map((tag) => `前置代理${tag.slice("中转".length)}`);
 }
 
 export function renameNodes(proxies: readonly RenameProxy[], args: RenameArgs = {}): RenameProxy[] {
