@@ -49,7 +49,7 @@ export function buildFeatureFlags(args: ScriptArgs): FeatureFlags {
 
 修改后运行 `npm run build`，`dist/` 会生成供 Sub-Store 执行的 `rename.js` 和 `rename.min.js`。这两个文件是构建产物，不应直接编辑或提交到源码分支。
 
-如果调整了重命名输出格式或保留标签，请同步检查 `src/constants.ts` 和 `src/node_parser.ts` 中的匹配规则，确保预处理结果仍能被 Mihomo 覆写正确识别。
+rename、sort 和 override 是同一条处理流水线，不应独立设计互不兼容的命名规则。调整输出格式或保留标签时，同步检查 `shared/` 的身份与引用约定，以及 `src/constants.ts`、`src/node_parser.ts` 和策略组的运行时过滤。链路标签及拨号映射共用 `shared/chain_tags.ts`；provider 场景尤其需要最终名称与属性持续一致，不能只修正一次快照。相关跨阶段回归见 `scripts/tests/provider_chains.test.ts`。
 
 ## 调整代理组
 

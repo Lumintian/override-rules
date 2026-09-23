@@ -47,7 +47,7 @@ npm run preview -- --port=8788
 | 输入 | 行为 |
 | --- | --- |
 | 逐行节点名称 | 忽略空行和首尾空白，保留 Unicode / 国旗；每行构造一个仅含 `name` 的节点 |
-| Clash YAML / JSON | 必须包含非空的 `proxies` 数组；保留节点连接字段、`dialer-proxy`、Tailscale 类型等信息，实际输出由覆写脚本决定 |
+| Clash YAML / JSON | 包含非空 `proxies` 数组或非空 `proxy-providers`；保留连接字段及 provider 定义，实际输出由覆写脚本决定 |
 | 公网 HTTP(S) 链接 | 返回上述文本或配置；支持最多 3 次重定向，每一跳均校验目标地址 |
 
 自动识别以 JSON 起始符或 YAML 的 `proxies` / `proxy-providers` 字段为依据。名称文本恰好类似配置语法时，请手动选择“逐行名称”。
@@ -58,6 +58,14 @@ npm run preview -- --port=8788
 - 单次输入或下载不超过 **2 MiB**，最多 **2000** 个节点，单个名称最多 **512** 字符。
 - 下载总超时 **10 秒**；请求未压缩文本，若远端仍强制压缩，会提示下载解压后粘贴。
 - YAML 限制别名展开数量；改名和覆写执行分别受 **2 秒**的 VM 超时限制。
+
+## provider-only 结构预览
+
+允许粘贴没有 `proxies` 的 `proxy-providers` 配置，也支持混合输入。预览器保留 provider 并展示生成的 `use` 引用，但**不下载快照、不展开 provider（包括 inline payload）、不模拟其动态成员**。改名、地区统计和节点计数仍只处理显式节点；provider-only 输入显示 0 个显式节点，不代表运行时没有节点。由于没有已校验快照，预览不会把 provider 加入前置或落地链路组，也不会从 provider 发现链路。显式落地对应的前置组只展示显式候选，不能据此判断实际 provider 前置可用性。
+
+`providerurl` / `providerinterval` 参数在预览中会明确报错，而不是被忽略或触发自动联网。请移除这两个参数，用已有 provider 定义查看引用结构；完整快照生成应在支持异步入口的 Sub-Store Node 环境中验证，详见[节点订阅 provider](./CONFIGURATION.md#节点订阅-provider-与生成时快照)。
+
+策略组卡片可能没有可显示的显式成员。工具会提示动态成员尚未解析；**预览成功不等于 Mihomo 成功加载、provider 下载成功或节点可连接**。带 `use` 的配置需交给实际 Mihomo 验证更新与成员行为。
 
 ## 预览与真实运行的区别
 
@@ -102,4 +110,12 @@ scripts/preview/
 └── web/           # 原生 TypeScript、HTML、CSS
 ```
 
-回归测试位于 `scripts/tests/preview.test.ts`，与其他测试一起通过 `npm test` 运行。生产构建和预生成 YAML 不包含预览工具，`npm run artifacts` 的原有行为不变。
+预览及 provider 回归测试与其他测试一起通过 `npm test` 运行。生产构建和预生成 YAML 不包含预览工具，`npm run artifacts` 的原有行为不变。
+
+可选的真实 Mihomo provider 更新测试（默认跳过，不自动下载内核）：
+
+```bash
+MIHOMO_BIN=/绝对路径/mihomo npx tsx --test scripts/tests/provider_runtime.test.ts
+```
+
+测试只启动临时内核和回环 HTTP 订阅，不访问生产控制器或真实订阅；隔离分流规则下载、Geo 数据与测速，验证 provider-only / 混合模式的地区及链路成员更新、落地排除、默认链路与字母链路隔离、空候选回退，且无需重载主配置。

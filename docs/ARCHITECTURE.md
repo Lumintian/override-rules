@@ -63,6 +63,16 @@ flowchart TD
     end
 ```
 
+上图描述显式节点路径。provider 模式在其外增加可选的异步下载层：
+
+```text
+全局 main = runMain()
+  ├─ 无 providerurl → 同步 main(config, args)
+  └─ 有 providerurl → prepareProvider → Sub-Store HTTP/YAML → main(config, args, snapshotNodes)
+```
+
+`main()` 是同步生成核心。快照只决定地区计数、threshold、额外组资格和链路组结构，不进入输出 `proxies` 或任何显式节点名称列表。已有节点 provider 原样保留；地区组使用 `use + filter`，手动选择及 GLOBAL 提供全部 provider 的动态入口。未下载的 provider 不参与统计，后续刷新不会重算组结构。具体支持范围见 [provider 配置说明](./CONFIGURATION.md#节点订阅-provider-与生成时快照)。
+
 ### 各阶段职责
 
 | 阶段 | 核心模块 | 职责 |
@@ -79,6 +89,9 @@ flowchart TD
 
 | 文件 | 职责 | 关键导出 |
 |------|------|----------|
+| `src/main.ts` | 同步配置生成核心与可选异步部署入口 | `main()`, `runMain()` |
+| `shared/chain_tags.ts` | rename / override 共用的中转标签、拨号组映射及跨 JS / Mihomo 的名称过滤契约 | `readTransitTags()`, `landingChainId()`, `transitPattern()`, `hasConsistentTransitIdentity()` |
+| `src/proxy_providers.ts` | 节点 provider 合并、订阅参数校验、快照下载与链路一致性校验、Sub-Store Node API 适配 | `prepareProvider()`, `downloadSnapshot()`, `getProxyProviders()` |
 | `src/args.ts` | URL 参数解析与默认值处理 | `buildFeatureFlags()`, `parseGroupType()` |
 | `src/constants.ts` | 常量集中管理（国家元数据、代理组名称、CDN 地址等） | `countriesMeta`, `NODE_SUFFIX`, `PROXY_GROUPS` |
 | `src/node_parser.ts` | 多维度节点分类与过滤 | `parseNodesByLanding()`, `parseCountries()`, `parseTailscale()`, `getActiveCountryNames()` |
@@ -104,13 +117,15 @@ flowchart TD
 - `dialer-proxy: "前置代理A"` → A 链路，生成「前置代理A」和「落地节点A」；其余字母同理
 - 未匹配上述名称的节点 → **非落地节点**，用于地区分类及各前置组的入口候选
 
-只有同时存在已识别的落地链路和非落地节点时才激活链式模式。各链路按实际节点自动发现，不使用数量参数，也不生成空的前置/落地组。`front`、`front_a` 到 `front_z` 可以用逗号分隔的地区代码限制对应前置组；未配置时回退到全部非落地节点。
+纯显式模式保持原行为：同时存在落地链路和非落地节点时才激活链式模式。provider 模式从显式节点和快照共同发现链路，即使暂时没有前置候选，也生成被引用的目标组；空动态组使用 Mihomo 回退。`front`、`front_a` 到 `front_z` 限制前置地区，未配置时使用全部合格非落地候选。
+
+rename 的原始名称识别与 override 的最终名称过滤共用 `shared/chain_tags.ts`。快照先校验最终名称标签与 `dialer-proxy`，再分离落地/非落地节点；只有快照关联的 provider 可以动态进入链路组，未知来源不作为前置。运行时地区组与前置组都按标签排除全部链路，落地组按完整标签选取单条链路。`main()` 交给构建层的 `LandingChain.nodes` 只保留显式节点，避免快照名称泄漏为静态引用。
 
 ### 节点分类
 
 节点在进入配置构建阶段前，进行以下识别：
 
-1. **落地/非落地及链路编号** — 决定链式代理的节点来源。链式模式激活后，国家分类只扫描非落地节点；每组落地节点保留对其同名「前置代理X」的拨号引用。正则地区组也会通过转义后的精确名称排除已发现的落地节点。
+1. **落地/非落地及链路编号** — 决定链式代理的节点来源。链式模式激活后，国家分类只扫描非落地节点；每组落地节点保留对其同名「前置代理X」的拨号引用。纯显式正则地区组通过转义后的精确名称排除已发现的落地节点；provider 地区组按稳定标签动态排除全部链路。
 2. **国家/地区** — 通过正则匹配节点名称中的地理位置关键字，将节点归入对应的国家/地区分组。匹配规则定义在 `countriesMeta` 中。
 3. **Tailscale** — 从全部节点中识别 `type: tailscale`，供专用策略组、TUN 和分流规则使用。
 
@@ -124,9 +139,11 @@ flowchart TD
 
 ### args.ts 的默认值
 
-所有 URL 参数都有明确的默认值。`buildFeatureFlags()` 负责解析并回填默认值，产出类型安全的 `FeatureFlags` 对象。这使得下游模块无需关心参数来源或缺失情况——每个标志都有确定的值。
+功能 URL 参数都有明确的默认值；订阅相关的 `providerurl` / `providerinterval` 由 `proxy_providers.ts` 单独校验。`buildFeatureFlags()` 负责解析并回填功能默认值，产出类型安全的 `FeatureFlags` 对象。这使得下游模块无需关心参数来源或缺失情况——每个标志都有确定的值。
 
 ### 额外地区组参数
+
+以下手动成员排除与正则开关行为描述显式节点模式；存在 provider 时，手动组始终通过 `use` 包含其全部节点，地区组的显式候选与动态候选分开构建。
 
 `countriesMeta.code` 定义各地区的数量参数名，例如 `us`、`sg`；类型范围由 `CountryCode` 维护。`buildFeatureFlags()` 将参数解析为以地区名称为键的 `countryExtraCounts`。数量只接受 `0–100` 的整数，缺省或非法值为 `0`。
 
@@ -162,7 +179,7 @@ flowchart TD
 
 这是推荐的使用方式，原因在于：
 
-- 节点分类结果始终反映当前订阅的实际状态，新增或失效的节点会自动归入对应分组
+- 每次执行时重新计算节点分类与组结构；provider 模式下 Mihomo 后续更新仅改变动态成员，不会自动新建或删除地区组
 - 代理组可直接枚举具体节点名称（`regex: false`），比正则过滤更精确
 - 支持完整的运行时参数覆盖（通过 URL hash 传参）
 

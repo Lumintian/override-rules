@@ -54,6 +54,8 @@ https://cdn.jsdelivr.net/gh/Lumintian/override-rules@dist/convert.min.js#groupty
 
 动态 JavaScript 覆写会读取真实订阅节点并生成策略组，因此比预生成 YAML 更适合本项目的主要使用方式。完整参数表、地区代码和生成规则见 [JavaScript 动态覆写参数](docs/CONFIGURATION.md)。
 
+仅使用节点 provider 时，可在支持异步入口的 **Sub-Store Node / Docker Mihomo 快捷脚本**中设置 `providerurl`：生成时下载快照决定组结构，运行时由 Mihomo provider 更新节点，快照不会写入输出 `proxies`。编码方式、已验证版本和功能降级见 [provider 使用说明](docs/CONFIGURATION.md#节点订阅-provider-与生成时快照)。
+
 ## 文档导航
 
 | 文档 | 内容 |

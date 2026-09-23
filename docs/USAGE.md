@@ -31,7 +31,11 @@
 convert.min.js#front_a=hk,sg,jp&front_b=uk,de,fr
 ```
 
-没有配置 `front_a` 等参数时，该前置组使用全部非落地节点；指定地区当前无节点时仍保留 `DIRECT`，避免生成空组。只有落地节点、没有任何非落地节点时不会激活链式模式。
+纯显式节点模式下，没有配置 `front_a` 等参数时，前置组使用全部非落地节点；指定地区无候选时保留 `DIRECT`。只有落地节点、没有任何非落地节点时，保持原有不激活链式模式的行为。
+
+使用 provider 时，`providerurl` 快照可发现链路，前置和落地组通过 `use + filter` 动态引用已校验来源，不枚举快照名称。来源需保留最终名称中的 `中转 / 中转A…Z` 标签，例如 rename 使用 `chain&blkey=中转+中转A+中转B`；`chain` 单独开启只设置属性，可能丢失最终标签。前置组和普通地区组排除全部中转标签，避免循环。
+
+支持“provider 前置 + 显式落地”、反向混合和两端都在 provider 的情况。provider 模式保留已发现链路的目标组，即使前置当前为空；动态前置组空候选使用 Mihomo 的直连回退，而不是拿落地节点做前置。未校验来源不进入链路组。新增链路编号仍需重新生成配置，完整约束见 [provider 链式代理](./CONFIGURATION.md#provider-链式代理)。
 
 ![新增的代理组](../img/dialer-group.png) ![如何配置自建节点](../img/dialer-example.png)
 
@@ -65,7 +69,7 @@ AI 流量按以下优先级分流：
 
 ### Tailscale
 
-检测到 `tailscale` 类型节点后，脚本会生成对应策略组、TUN 配置及相关分流规则。
+检测到显式 `proxies` 中的 `tailscale` 类型节点后，脚本会生成对应策略组、TUN 配置及相关分流规则。provider 快照不承载这项自动处理。
 
 示例：
 
