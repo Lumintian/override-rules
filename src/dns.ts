@@ -194,16 +194,17 @@ function buildDnsConfig({ mode, ipv6Enabled, fakeIpFilter }: BuildDnsConfigInput
     const config: DnsConfig = {
         enable: true,
         ipv6: ipv6Enabled,
-        "prefer-h3": true,
+        "prefer-h3": false,
         "enhanced-mode": mode,
-        nameserver: ["system", "223.5.5.5", "119.29.29.29", "180.184.1.1"],
-        fallback: [
-            "quic://dns0.eu",
-            "https://dns.cloudflare.com/dns-query",
-            "https://dns.sb/dns-query",
-            "tcp://208.67.222.222",
-            "tcp://8.26.56.2",
-        ],
+        nameserver: ["https://cloudflare-dns.com/dns-query", "https://dns.google/dns-query"],
+        "respect-rules": true,
+        "direct-nameserver": ["tls://223.5.5.5"],
+        "direct-nameserver-follow-policy": true,
+        "proxy-server-nameserver": ["tls://223.5.5.5"],
+        "default-nameserver": ["tls://223.5.5.5"],
+        "nameserver-policy": {
+            "geosite:cn": ["https://doh.pub/dns-query", "https://dns.alidns.com/dns-query"],
+        },
     };
 
     if (fakeIpFilter) {

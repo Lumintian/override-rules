@@ -144,7 +144,10 @@ test("hosts, inherited DNS and infrastructure options survive ordering unchanged
     const original = structuredClone(config);
     const output = main(config, { full: "true", ipv6: "true", tun: "true" });
     assert.deepEqual(output.hosts, config.hosts);
-    assert.deepEqual(output.dns?.["nameserver-policy"], config.dns?.["nameserver-policy"]);
+    assert.deepEqual(output.dns?.["nameserver-policy"], {
+        "geosite:cn": ["https://doh.pub/dns-query", "https://dns.alidns.com/dns-query"],
+        ...config.dns?.["nameserver-policy"],
+    });
     assert.ok(output.dns?.["fake-ip-filter"]?.includes("+.example.test"));
     assert.equal(output["mixed-port"], 7890);
     assert.equal(output.tun?.enable, true);
