@@ -4,6 +4,14 @@ import { parse, stringify } from "yaml";
 import type { ClashConfig, DnsConfig } from "../../src/types";
 import { convert } from "./helpers";
 
+const defaultFakeIpFilter = [
+    "geosite:private",
+    "geosite:connectivity-check",
+    "geosite:category-ntp",
+    "geosite:category-stun",
+    "Mijia Cloud",
+];
+
 const defaultPolicy = {
     "geosite:cn": ["https://doh.pub/dns-query", "https://dns.alidns.com/dns-query"],
 };
@@ -33,7 +41,8 @@ test("bundled override emits the DNS defaults with correctly nested YAML fields"
     assertResolverDefaults(output.dns);
     assert.deepEqual(output.dns["nameserver-policy"], defaultPolicy);
     assert.equal(output.dns["enhanced-mode"], "fake-ip");
-    assert.ok(output.dns["fake-ip-filter"]?.includes("geosite:connectivity-check"));
+    assert.equal(output.dns["fake-ip-filter-mode"], "blacklist");
+    assert.deepEqual(output.dns["fake-ip-filter"], defaultFakeIpFilter);
 
     const parsed = parse(stringify(output)) as ClashConfig;
     assert.deepEqual(parsed.dns, output.dns);
@@ -49,7 +58,11 @@ test("DNS resolver defaults apply to both modes while IPv6 remains configurable"
             assertResolverDefaults(output.dns, ipv6);
             assert.deepEqual(output.dns["nameserver-policy"], defaultPolicy);
             assert.equal(output.dns["enhanced-mode"], fakeip ? "fake-ip" : "redir-host");
-            assert.equal(Array.isArray(output.dns["fake-ip-filter"]), fakeip);
+            assert.equal(output.dns["fake-ip-filter-mode"], fakeip ? "blacklist" : undefined);
+            assert.deepEqual(
+                output.dns["fake-ip-filter"],
+                fakeip ? defaultFakeIpFilter : undefined
+            );
         }
     }
 });
@@ -71,7 +84,13 @@ test("upstream DNS policies and filters merge without replacing resolver default
             "default-nameserver": ["192.0.2.53"],
             "nameserver-policy": { "+.example.test": "192.0.2.53" },
             "proxy-server-nameserver-policy": { "+.proxy.test": ["192.0.2.54"] },
-            "fake-ip-filter": ["+.example.test", "geosite:connectivity-check"],
+            "fake-ip-filter-mode": "whitelist",
+            "fake-ip-filter": [
+                "+.example.test",
+                "geosite:private",
+                "geosite:connectivity-check",
+                "Mijia Cloud",
+            ],
         },
     };
     const before = structuredClone(config);
@@ -86,12 +105,8 @@ test("upstream DNS policies and filters merge without replacing resolver default
         output.dns["proxy-server-nameserver-policy"],
         config.dns?.["proxy-server-nameserver-policy"]
     );
-    assert.ok(output.dns["fake-ip-filter"]?.includes("+.example.test"));
-    assert.equal(
-        output.dns["fake-ip-filter"]?.filter((domain) => domain === "geosite:connectivity-check")
-            .length,
-        1
-    );
+    assert.equal(output.dns["fake-ip-filter-mode"], "blacklist");
+    assert.deepEqual(output.dns["fake-ip-filter"], [...defaultFakeIpFilter, "+.example.test"]);
     assert.deepEqual(config, before);
 });
 
