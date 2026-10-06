@@ -1,5 +1,12 @@
 # Changelog
 
+## [3.3.0](https://github.com/Lumintian/override-rules/compare/src-v3.2.0...src-v3.3.0) (2026-10-06)
+
+
+### Features
+
+- Replace the fakeipfilter with geosite ([e27e6da](https://github.com/Lumintian/override-rules/commit/e27e6da0401265f11362c923b1cd95be3ef9616a))
+- Configure the dns to avoid leaks ([fa3e547](https://github.com/Lumintian/override-rules/commit/fa3e547565f497f7b5ffd6c0c3245457a9082944))
 ## [3.2.0](https://github.com/Lumintian/override-rules/compare/src-v3.1.1...src-v3.2.0) (2026-09-23)
 
 
@@ -49,26 +56,6 @@
 ## [3.0.0](https://github.com/Lumintian/override-rules/compare/src-v2.7.6...src-v3.0.0) (2026-09-20)
 
 
-### Documentation
-
-- 说明多落地链路配置 ([2d9da89](https://github.com/Lumintian/override-rules/commit/2d9da89afbd238667ff6e262440a48fe2f531077))
-
-
-### Features
-
-- 支持多链路与前置地区映射 ([4748e80](https://github.com/Lumintian/override-rules/commit/4748e807adc9a2014c40d6f469636684db4d1edb))
-- 按中转标签写入前置代理引用 ([d9b4384](https://github.com/Lumintian/override-rules/commit/d9b438493f0cd69045917d5ea74ae915ed84de7a))
-- 手动选择组排除有额外节点组的节点 ([0ebcd5c](https://github.com/Lumintian/override-rules/commit/0ebcd5c732fae968b57457665de26bb262720088))
-- 从手动选择组中排除达到阈值而生成地区组的节点 ([74bfce4](https://github.com/Lumintian/override-rules/commit/74bfce485845d11277955d1ffb37fc18dd7954b3))
-## [2.7.6](https://github.com/Lumintian/override-rules/compare/src-v2.7.5...src-v2.7.6) (2026-09-16)
-
-
-### Bug Fixes
-
-- 升级 brace-expansion 至 5.0.12 修复高危 DoS 告警 ([ba5d324](https://github.com/Lumintian/override-rules/commit/ba5d32433da3746ec75d6fbe404c123efc251242))
-## [2.7.5](https://github.com/Lumintian/override-rules/compare/src-v2.7.4...src-v2.7.5) (2026-09-16)
-
-
 ### Bug Fixes
 
 - Normalize country identity across preprocessing and override ([103f87a](https://github.com/Lumintian/override-rules/commit/103f87a47d3fb8d19b206f8a49af4993906168c3))
@@ -80,13 +67,11 @@
 
 ### Build
 
-- 恢复 TypeScript 7 类型检查工具链与 TS lint 覆盖 ([5d12e06](https://github.com/Lumintian/override-rules/commit/5d12e064988de66329db4fd232ebc1309825ca79))
 - Write generated scripts and YAML under dist/ ([d944f6c](https://github.com/Lumintian/override-rules/commit/d944f6cb92bcffc2ede98c0370ee7cb77bf0fc1a))
 
 
 ### CI
 
-- 修复 release/preview 调用已删除的 typecheck 脚本 ([2db0c1c](https://github.com/Lumintian/override-rules/commit/2db0c1cf8c898aff3ff13ac00c68cf419c4be5ba))
 - Collect release and preview artifacts from dist/ ([06a0b3f](https://github.com/Lumintian/override-rules/commit/06a0b3fe0b0dcde79356dae3d9c3d8ed79704f47))
 
 
@@ -100,7 +85,7 @@
 
 ### Documentation
 
-- 说明双 TypeScript 版本设计与 typecheck 工作流 ([17816dc](https://github.com/Lumintian/override-rules/commit/17816dc2313b3a576cb58712bee2a37fb6d959bd))
+- 说明多落地链路配置 ([2d9da89](https://github.com/Lumintian/override-rules/commit/2d9da89afbd238667ff6e262440a48fe2f531077))
 - Document shared preferences, merged sorting and validation limits ([5a574d0](https://github.com/Lumintian/override-rules/commit/5a574d05446e12462875b8dfce2c7e76b63f1c58))
 - Point local artifact paths at dist/ ([e887614](https://github.com/Lumintian/override-rules/commit/e8876142617022e2c50effc67149122524b0aef7))
 - Explain 漏网之鱼 as unmatched MATCH traffic ([f33f3d8](https://github.com/Lumintian/override-rules/commit/f33f3d867963902020bbc7600318d90a2a90a6b4))
@@ -112,7 +97,10 @@
 
 ### Features
 
-- 添加金融服务代理组 ([fa263d8](https://github.com/Lumintian/override-rules/commit/fa263d89a73a03f5b96ba1e19bf4c1e441b79550))
+- 支持多链路与前置地区映射 ([4748e80](https://github.com/Lumintian/override-rules/commit/4748e807adc9a2014c40d6f469636684db4d1edb))
+- 按中转标签写入前置代理引用 ([d9b4384](https://github.com/Lumintian/override-rules/commit/d9b438493f0cd69045917d5ea74ae915ed84de7a))
+- 手动选择组排除有额外节点组的节点 ([0ebcd5c](https://github.com/Lumintian/override-rules/commit/0ebcd5c732fae968b57457665de26bb262720088))
+- 从手动选择组中排除达到阈值而生成地区组的节点 ([74bfce4](https://github.com/Lumintian/override-rules/commit/74bfce485845d11277955d1ffb37fc18dd7954b3))
 - Publish a sort-only merged collection entry ([3ecd5a7](https://github.com/Lumintian/override-rules/commit/3ecd5a70a506ee304221accbd9fd57603acd6fe1))
 - Add shared hierarchical node ordering and independent numbering ([2e67783](https://github.com/Lumintian/override-rules/commit/2e67783d6cb53415a7d1bf864854b424cce581ee))
 - Add 稳定代理 group ([b29f822](https://github.com/Lumintian/override-rules/commit/b29f822c2e4d218a54068bb7a866b888c1cef05c))
@@ -129,15 +117,6 @@
 
 ### Other
 
-- Agent Host changes for agents/update-architecture-doc (#69) ([9964641](https://github.com/Lumintian/override-rules/commit/996464115236585d946455d95153197ebc478455))
-- Update package-lock.json and package.json for TypeScript 7 migration ([bada7d2](https://github.com/Lumintian/override-rules/commit/bada7d2955b9ad14e30556f60a82d684bd759041))
-- Refactor CI workflow and update documentation for TypeScript 7 migration
-
-- Adjust CI configuration in ci.yaml
-- Update HOW_TO_CUSTOMISE.md for clarity
-- Refine eslint.config.mjs to improve linting rules
-- Optimize package-lock.json and package.json for dependencies ([9abb81a](https://github.com/Lumintian/override-rules/commit/9abb81a06d884a3566b5382674584959b5c8a249))
-- Agent Host changes for agents/typescript-7-migration-and-dependencies ([d0eadd9](https://github.com/Lumintian/override-rules/commit/d0eadd9dedeabfe992f13ae9b5353436afbfee6a))
 - Simplify service groups and split AI routing ([85caea9](https://github.com/Lumintian/override-rules/commit/85caea91f585881cdf3e29e5f0d360fa47898412))
 
 
@@ -151,6 +130,46 @@
 
 - Update existing candidate-order expectations ([25128ec](https://github.com/Lumintian/override-rules/commit/25128ec5337775770432c46478c9b89f6d9669e7))
 - Run regression tests and typecheck shared modules ([d73678f](https://github.com/Lumintian/override-rules/commit/d73678fd968548a3ad5f3f49aa7125ba24c82a64))
+## [2.7.6](https://github.com/Lumintian/override-rules/compare/src-v2.7.5...src-v2.7.6) (2026-09-16)
+
+
+### Bug Fixes
+
+- 升级 brace-expansion 至 5.0.12 修复高危 DoS 告警 ([ba5d324](https://github.com/Lumintian/override-rules/commit/ba5d32433da3746ec75d6fbe404c123efc251242))
+## [2.7.5](https://github.com/Lumintian/override-rules/compare/src-v2.7.4...src-v2.7.5) (2026-09-16)
+
+
+### Build
+
+- 恢复 TypeScript 7 类型检查工具链与 TS lint 覆盖 ([5d12e06](https://github.com/Lumintian/override-rules/commit/5d12e064988de66329db4fd232ebc1309825ca79))
+
+
+### CI
+
+- 修复 release/preview 调用已删除的 typecheck 脚本 ([2db0c1c](https://github.com/Lumintian/override-rules/commit/2db0c1cf8c898aff3ff13ac00c68cf419c4be5ba))
+
+
+### Documentation
+
+- 说明双 TypeScript 版本设计与 typecheck 工作流 ([17816dc](https://github.com/Lumintian/override-rules/commit/17816dc2313b3a576cb58712bee2a37fb6d959bd))
+
+
+### Features
+
+- 添加金融服务代理组 ([fa263d8](https://github.com/Lumintian/override-rules/commit/fa263d89a73a03f5b96ba1e19bf4c1e441b79550))
+
+
+### Other
+
+- Agent Host changes for agents/update-architecture-doc (#69) ([9964641](https://github.com/Lumintian/override-rules/commit/996464115236585d946455d95153197ebc478455))
+- Update package-lock.json and package.json for TypeScript 7 migration ([bada7d2](https://github.com/Lumintian/override-rules/commit/bada7d2955b9ad14e30556f60a82d684bd759041))
+- Refactor CI workflow and update documentation for TypeScript 7 migration
+
+- Adjust CI configuration in ci.yaml
+- Update HOW_TO_CUSTOMISE.md for clarity
+- Refine eslint.config.mjs to improve linting rules
+- Optimize package-lock.json and package.json for dependencies ([9abb81a](https://github.com/Lumintian/override-rules/commit/9abb81a06d884a3566b5382674584959b5c8a249))
+- Agent Host changes for agents/typescript-7-migration-and-dependencies ([d0eadd9](https://github.com/Lumintian/override-rules/commit/d0eadd9dedeabfe992f13ae9b5353436afbfee6a))
 ## [2.7.4](https://github.com/Lumintian/override-rules/compare/src-v2.7.3...src-v2.7.4) (2026-09-09)
 
 
